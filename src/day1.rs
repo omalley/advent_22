@@ -1,17 +1,10 @@
 use std::cmp;
 
 pub fn generator(input: &str) -> Vec<Vec<i32>> {
-  let mut result = Vec::new();
-  let mut next = Vec::new();
-  for line in input.lines() {
-    if let Ok(num) = line.parse() {
-      next.push(num);
-    } else {
-      result.push(next.clone());
-      next.clear();
-    }
-  }
-  result
+  input.split("\n\n")
+    .map(|section|
+       section.lines().filter_map(|line| line.parse().ok()).collect())
+    .collect()
 }
 
 pub fn part1(input: &[Vec<i32>]) -> i32 {
