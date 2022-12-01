@@ -12,6 +12,7 @@ description = "Solutions to AoC 2022"
 [dependencies]
 argh = "0.1"
 colored = "2"
+itertools = "0.10"
 
 [dev-dependencies]
 criterion = "0.3"

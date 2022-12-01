@@ -1,9 +1,12 @@
+use itertools::Itertools;
 use std::cmp;
 
 pub fn generator(input: &str) -> Vec<Vec<i32>> {
-  input.split("\n\n")
-    .map(|section|
-       section.lines().filter_map(|line| line.parse().ok()).collect())
+  input.lines()
+    .map(|line| line.parse().ok())
+    .group_by(|x| x.is_some()).into_iter()
+    .filter(|(is_valid, _)| *is_valid)
+    .map(|(_, group)| group.map(|i| i.unwrap()).collect())
     .collect()
 }
 
