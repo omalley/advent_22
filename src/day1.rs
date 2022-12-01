@@ -1,13 +1,17 @@
-use itertools::Itertools;
 use std::cmp;
 
 pub fn generator(input: &str) -> Vec<Vec<i32>> {
   input.lines()
     .map(|line| line.parse().ok())
-    .group_by(|x| x.is_some()).into_iter()
-    .filter(|(is_valid, _)| *is_valid)
-    .map(|(_, group)| group.map(|i| i.unwrap()).collect())
-    .collect()
+    .fold(vec![Vec::new()], |mut acc, elm| {
+      if let Some(i) = elm {
+        let last = acc.len() - 1;
+        acc[last].push(i)
+      } else {
+        acc.push(Vec::new())
+      }
+      acc
+    })
 }
 
 pub fn part1(input: &[Vec<i32>]) -> i32 {
