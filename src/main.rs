@@ -107,5 +107,6 @@ main! {
     year: 2022,
     implemented_days: [
         day1,
+        day2,
     ]
 }
