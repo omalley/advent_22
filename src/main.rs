@@ -108,5 +108,6 @@ main! {
     implemented_days: [
         day1,
         day2,
+        day3,
     ]
 }
