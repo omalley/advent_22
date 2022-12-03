@@ -1,19 +1,23 @@
-/// Define a set of items using an array of bool
-#[derive(Debug)]
+/// Define a set of items using a long
+#[derive(Debug,Default)]
 pub struct Contents {
-  items: [bool; Contents::SIZE],
+  items: u64,
 }
 
 impl Contents {
   const SIZE: usize = 56;
 
+  fn set(&mut self, posn: usize) {
+    self.items |= 1u64 << posn;
+  }
+
   /// Parse from a list o characters
   fn from_chars(chars: &[char]) -> Self {
-    let mut items = [false; Self::SIZE];
+    let mut result = Self::default();
     for ch in chars {
-      items[Self::position(*ch)] = true;
+      result.set(Self::position(*ch));
     }
-    Contents{items}
+    result
   }
 
   /// Map the characters to position in the array
@@ -36,38 +40,27 @@ impl Contents {
 
   /// Create the intersection of a list of sets
   fn intersect(sets: &[Self]) -> Self {
-    let mut items = [true; Self::SIZE];
+    let mut result = Self::default();
+    result.items = u64::MAX;
     for s in sets {
-      for i in 0..Self::SIZE {
-        if !s.items[i] {
-          items[i] = false;
-        }
-      }
+      result.items &= s.items;
     }
-    Contents{items}
+    result
   }
 
   /// Create the union oof a list of sets
   fn union(sets: &[Self]) -> Self {
-    let mut items = [false; Self::SIZE];
+    let mut result = Self::default();
     for s in sets {
-      for i in 0..Self::SIZE {
-        if s.items[i] {
-          items[i] = true;
-        }
-      }
+      result.items |= s.items;
     }
-    Contents{items}
+    result
   }
 
   /// Return the first item in the set
   fn first_item(&self) -> Option<char> {
-    for i in 0..Self::SIZE {
-      if self.items[i] {
-        return Some(Self::item(i))
-      }
-    }
-    None
+    let posn = self.items.trailing_zeros() as usize;
+    if posn <= Self::SIZE { Some(Self::item(posn)) } else { None }
   }
 }
 
