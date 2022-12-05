@@ -7,17 +7,15 @@ impl State {
   fn parse(s: &str) -> Self {
     // convert each line to a list of characters
     let lines: Vec<Vec<char>> = s.lines().map(|l| l.chars().collect::<Vec<char>>()).collect();
-    // Read from the bottom & skip the stack numbers
+    // Read from the bottom
     let mut itr = lines.iter().rev();
-    itr.next();
-    let mut stacks = Vec::new();
+    // Get the number of columns/stacks.
+    let num_columns = itr.next().unwrap().iter().collect::<String>().split_whitespace().count();
+    let mut stacks: Vec<Vec<char>> = (0..num_columns).map(|_| Vec::new()).collect();
     for line in itr {
       let mut x = 0;
       // ignore the padding between columns
       while 4 * x + 1 < line.len() {
-        if x >= stacks.len() {
-          stacks.push(Vec::new());
-        }
         let char = line[4 * x + 1];
         if char != ' ' {
           stacks.get_mut(x).unwrap().push(char);
