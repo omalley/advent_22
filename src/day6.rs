@@ -5,12 +5,11 @@ pub fn generator(input: &str) -> InputType {
   input.chars().collect()
 }
 
+// Find whether all of the chars are unique.
 fn is_all_unique(w: &[(usize, char)]) -> bool {
   for i in 0..(w.len()-1) {
-    for j in i+1..w.len() {
-      if w[i].1 == w[j].1 {
-        return false
-      }
+    if w[i+1..].iter().find(|c| c.1 == w[i].1).is_some() {
+      return false
     }
   }
   true
