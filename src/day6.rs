@@ -6,9 +6,9 @@ pub fn generator(input: &str) -> InputType {
 }
 
 // Find whether all of the chars are unique.
-fn is_all_unique(w: &[(usize, char)]) -> bool {
+fn is_all_unique(w: &[char]) -> bool {
   for i in 0..(w.len()-1) {
-    if w[i+1..].iter().find(|c| c.1 == w[i].1).is_some() {
+    if w[i+1..].contains(&w[i]) {
       return false
     }
   }
@@ -16,8 +16,12 @@ fn is_all_unique(w: &[(usize, char)]) -> bool {
 }
 
 fn find_unique(input: &Vec<char>, size: usize) -> usize {
-  let chars: Vec<(usize, char)> = input.iter().enumerate().map(|(i,&c)| (i,c)).collect();
-  chars.windows(size).find(| &w | is_all_unique(w)).unwrap().first().unwrap().0 + size
+  for posn in 0..(input.len()-size) {
+    if is_all_unique(&input[posn..posn+size]) {
+      return posn + size
+    }
+  }
+  usize::MAX
 }
 
 pub fn part1(input: &InputType) -> OutputType {
