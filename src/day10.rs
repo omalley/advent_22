@@ -1,18 +1,18 @@
 type InputType = Vec<Command>;
-type OutputType = i64;
+type OutputType = String;
 
 #[derive(Debug)]
 pub enum Command {
-  ADDX(i64),
-  NOOP,
+  AddX(i64),
+  NoOp,
 }
 
 impl Command {
   fn parse(line: &str) -> Self {
     let words: Vec<&str> = line.split_whitespace().collect();
     match words[0] {
-      "addx" => Self::ADDX(words[1].parse::<i64>().expect("expected delta")),
-      "noop" => Self::NOOP,
+      "addx" => Self::AddX(words[1].parse::<i64>().expect("expected delta")),
+      "noop" => Self::NoOp,
       _ => panic!("Unknown command {}", line),
     }
   }
@@ -38,8 +38,8 @@ impl State {
   fn execute(&mut self, cmd: &Command) {
     self.prev = self.x;
     match cmd {
-      Command::ADDX(val) => { self.x += val; self.time += 2; },
-      Command::NOOP => { self.time += 1; }
+      Command::AddX(val) => { self.x += val; self.time += 2; },
+      Command::NoOp => { self.time += 1; }
     }
   }
 }
@@ -58,16 +58,53 @@ pub fn part1(input: &InputType) -> OutputType {
       next_cycle += PERIOD;
     }
   }
-  result
+  format!("{}", result)
+}
+
+fn pixel(value: i64, column: usize) -> char {
+  if i64::abs(value - column as i64) <= 1 {
+    '#'
+  } else {
+    ' '
+  }
 }
 
 pub fn part2(input: &InputType) -> OutputType {
-  0
+  let mut result = String::new();
+  let mut state = State::default();
+  let mut time: usize = 0;
+  for cmd in input {
+    state.execute(cmd);
+    while time < state.time {
+      result.push(pixel(state.prev, time % PERIOD));
+      time += 1;
+      if time % PERIOD == 0 {
+        result.push('\n');
+      }
+    }
+  }
+  result
 }
 
 #[cfg(test)]
 mod tests {
   use crate::day10::{generator, part1, part2};
+
+  #[test]
+  fn test_part1() {
+    assert_eq!("13140", part1(&generator(INPUT)));
+  }
+
+  #[test]
+  fn test_part2() {
+    let expected = "##  ##  ##  ##  ##  ##  ##  ##  ##  ##  \n\
+                           ###   ###   ###   ###   ###   ###   ### \n\
+                           ####    ####    ####    ####    ####    \n\
+                           #####     #####     #####     #####     \n\
+                           ######      ######      ######      ####\n\
+                           #######       #######       #######     \n".to_string();
+    assert_eq!(expected, part2(&generator(INPUT)));
+  }
 
   const INPUT: &str =
 "addx 15
@@ -216,14 +253,4 @@ addx -11
 noop
 noop
 noop";
-
-  #[test]
-  fn test_part1() {
-    assert_eq!(13140, part1(&generator(INPUT)));
-  }
-
-  #[test]
-  fn test_part2() {
-    assert_eq!(1, part2(&generator(INPUT)));
-  }
 }
