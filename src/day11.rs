@@ -5,21 +5,6 @@ type OutputType = usize;
 type ItemType = u64;
 type LiteralType = u64;
 
-struct ProblemDetail {
-  has_calming: bool,
-  max: ItemType,
-}
-
-impl ProblemDetail {
-  fn new(monkies: &Vec<Monkey>, has_calming: bool) -> ProblemDetail {
-    let mut max = monkies.iter().map(|m| m.test.divisor()).product();
-    if has_calming && max % 3 != 0 {
-      max *= 3;
-    }
-    ProblemDetail{has_calming, max}
-  }
-}
-
 #[derive(Clone,Debug)]
 enum Operation {
   Add(ItemType),
@@ -37,13 +22,12 @@ impl Operation {
     }
   }
 
-  fn perform(&self, val: &mut ItemType, problem: &ProblemDetail) {
+  fn perform(&self, val: &mut ItemType) {
     match self {
       Self::Add(lit) => { *val += lit },
       Self::Multiply(lit) => { *val *= lit },
       Self::Square => { *val *= *val },
     }
-    *val %= problem.max;
   }
 }
 
@@ -114,13 +98,11 @@ impl Monkey {
     Ok(Monkey{items, operation, test, next, inspected: 0})
   }
 
-  fn next_throw(&mut self, problem: &ProblemDetail) -> Option<FlyingObject> {
+  fn next_throw(&mut self, clip: impl Fn(ItemType) -> ItemType) -> Option<FlyingObject> {
     let mut item = self.items.pop_front()?;
     self.inspected += 1;
-    self.operation.perform(&mut item, problem);
-    if problem.has_calming {
-      item /= 3u64;
-    }
+    self.operation.perform(&mut item);
+    item = clip(item);
     let target = if self.test.check(item) { self.next.0 } else { self.next.1 };
     Some(FlyingObject{item, target})
   }
@@ -136,13 +118,10 @@ pub fn generator(input: &str) -> InputType {
     .collect::<Vec<Monkey>>()
 }
 
-fn do_round(monkies: &mut Vec<Monkey>, problem: &ProblemDetail) {
+fn do_round(monkies: &mut Vec<Monkey>, clip: impl Fn(ItemType) -> ItemType) {
   for m in 0..monkies.len() {
-    loop {
-      match monkies[m].next_throw(problem) {
-        Some(flying) => { monkies[flying.target].catch_object(flying.item) },
-        None => { break; },
-      }
+    while let Some(flying) = monkies[m].next_throw(&clip) {
+      monkies[flying.target].catch_object(flying.item);
     }
   }
 }
@@ -153,20 +132,26 @@ fn compute_top_two(monkies: &Vec<Monkey>) -> OutputType {
   counts.iter().take(2).product()
 }
 
+fn find_multiple(monkies: &Vec<Monkey>, extra_factors: &Vec<ItemType>) -> ItemType {
+  let mut factors: Vec<ItemType> = monkies.iter().map(|m| m.test.divisor()).collect();
+  factors.extend(extra_factors.iter());
+  factors.iter().fold(1, |acc, v| if acc % v == 0 { acc } else { acc * v })
+}
+
 pub fn part1(input: &InputType) -> OutputType {
-  let problem = ProblemDetail::new(input, true);
   let mut monkies = (*input).clone();
+  let multiple = find_multiple(&monkies, &vec![3]);
   for _ in 0..20 {
-    do_round(&mut monkies, &problem);
+    do_round(&mut monkies, |v| (v % multiple) / 3);
   }
   compute_top_two(&monkies)
 }
 
 pub fn part2(input: &InputType) -> OutputType {
-  let problem = ProblemDetail::new(input, false);
   let mut monkies = (*input).clone();
+  let multiple = find_multiple(&monkies, &vec![]);
   for _ in 0..10_000 {
-    do_round(&mut monkies, &problem);
+    do_round(&mut monkies, |v| v % multiple);
   }
   compute_top_two(&monkies)
 }
