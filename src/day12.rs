@@ -64,11 +64,13 @@ pub fn generator(input: &str) -> InputType {
   Puzzle::parse(input)
 }
 
-pub fn part1(input: &InputType) -> OutputType {
+fn shortest_distance(input: &Puzzle, starting: Vec<Position>) -> usize {
   let mut distance = vec!{vec!{usize::MAX; input.width}; input.height};
-  distance[input.start.y][input.start.x] = 0;
   let mut queue = PriorityQueue::new();
-  queue.push(input.start.clone(), Reverse(0));
+  for start in starting {
+    distance[start.y][start.x] = 0;
+    queue.push(start, Reverse(0));
+  }
   while let Some((current, Reverse(dist))) = queue.pop() {
     if current == input.end {
       return dist
@@ -83,8 +85,20 @@ pub fn part1(input: &InputType) -> OutputType {
   distance[input.end.y][input.end.x]
 }
 
+pub fn part1(input: &InputType) -> OutputType {
+  shortest_distance(input, vec!{input.start.clone()})
+}
+
 pub fn part2(input: &InputType) -> OutputType {
-  0
+  let mut starting = Vec::new();
+  for x in 0..input.width {
+    for y in 0..input.height {
+      if input.elevations[y][x] == 0 {
+        starting.push(Position{x, y});
+      }
+    }
+  }
+  shortest_distance(input, starting)
 }
 
 #[cfg(test)]
@@ -98,7 +112,7 @@ mod tests {
 
   #[test]
   fn test_part2() {
-    //assert_eq!(2713310158, part2(&generator(INPUT)));
+    assert_eq!(29, part2(&generator(INPUT)));
   }
 
   const INPUT: &str = "Sabqponm\n\
