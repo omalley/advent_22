@@ -1,4 +1,3 @@
-use std::borrow::Borrow;
 use std::cell::RefCell;
 use std::cmp::Ordering;
 use std::fmt::{Display, Formatter};
@@ -6,7 +5,7 @@ use std::fmt::{Display, Formatter};
 type InputType = Vec<(List,List)>;
 type OutputType = usize;
 
-#[derive(Debug)]
+#[derive(Clone,Debug)]
 pub enum List {
   Int(i64),
   List(Vec<RefCell<List>>),
@@ -120,19 +119,28 @@ pub fn part1(input: &InputType) -> OutputType {
     .sum()
 }
 
+const DIVIDER_1: &str = "[[2]]";
+const DIVIDER_2: &str = "[[6]]";
+
 pub fn part2(input: &InputType) -> OutputType {
-  0
+  let mut list: Vec<List> = Vec::new();
+  for (l, r) in input {
+    list.push(l.clone());
+    list.push(r.clone());
+  }
+  list.push(List::parse(DIVIDER_1));
+  list.push(List::parse(DIVIDER_2));
+  list.sort_by(|l, r| l.cmp(r));
+  list.iter().enumerate().filter(|(_, l)| {
+    let str = format!("{}", l);
+    str == DIVIDER_1 || str == DIVIDER_2
+  }).map(|(i, _)| i + 1).product()
 }
 
 #[cfg(test)]
 mod tests {
   use std::cmp::Ordering;
   use crate::day13::{generator, List, part1, part2};
-
-  #[test]
-  fn test_parse() {
-    println!("{}", List::parse("[[[5],[0,10,[2,10,6,0,8]]],[0,6,10,9]]"));
-  }
 
   #[test]
   fn test_cmp() {
@@ -172,7 +180,7 @@ mod tests {
 
   #[test]
   fn test_part2() {
-    //assert_eq!(29, part2(&generator(INPUT)));
+    assert_eq!(140, part2(&generator(INPUT)));
   }
 
   const INPUT: &str = "[1,1,3,1,1]\n\
