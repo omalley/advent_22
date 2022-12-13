@@ -33,7 +33,7 @@ macro_rules! benchmarks {
 
 benchmarks! {
     year: 2022,
-    bench_day: day1
+    bench_day: day13
 }
 
 criterion_group!(benches, benchmark_function);

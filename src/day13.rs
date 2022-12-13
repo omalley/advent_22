@@ -1,85 +1,87 @@
 use std::cmp::Ordering;
 use std::fmt::{Display, Formatter};
+use std::iter::Peekable;
 use std::rc::Rc;
+use std::str::Chars;
 
-type InputType = Vec<(Rc<List>,Rc<List>)>;
+type InputType = Vec<Rc<List>>;
 type OutputType = usize;
 
-#[derive(Clone,Debug)]
+#[derive(Clone,Debug,Eq,PartialEq)]
 pub enum List {
   Int(i64),
-  List(Vec<Rc<List>>),
+  List(Vec<List>),
 }
 
 impl List {
-  fn parse_num(chars: &[char]) -> (Rc<List>, usize) {
-    let num: String = chars.iter().take_while(|&&c| c >= '0' && c <= '9').collect();
-    (Rc::new(List::Int(num.parse::<i64>().expect("number"))), num.len())
+  fn parse_digit(chars: &mut Peekable<Chars>) -> i64 {
+    (chars.next().unwrap() as i64) - ('0' as i64)
+  }
+
+  fn parse_num(chars: &mut Peekable<Chars>) -> List {
+    let mut num: i64 = 0;
+    loop {
+      match chars.peek() {
+        Some('0'..='9') => { num = num * 10 + Self::parse_digit(chars); }
+        _ => return Self::Int(num),
+      }
+    }
   }
 
   /// Parse a list and return the list and how many characters were used
-  fn parse_list(chars: &[char]) -> (Rc<List>, usize) {
-    let mut posn: usize = 0;
-    if chars[posn] != '[' {
-      panic!("expected '[' at {:?}", chars);
-    }
-    posn += 1;
-    let mut list: Vec<Rc<List>> = Vec::new();
-    while chars[posn] != ']' {
-      match chars[posn] {
-        '0'..='9' => {
-          let (val, next) = Self::parse_num(&chars[posn..]);
-          list.push(val);
-          posn += next;
-        },
-        ',' => {
-          posn += 1;
-        },
-        '[' => {
-          let (val, next) = Self::parse_list(&chars[posn..]);
-          list.push(val);
-          posn += next;
-        },
-        _ => panic!("Can't handle {:?}", &chars[posn..]),
+  fn parse_list(chars: &mut Peekable<Chars>) -> List {
+    // Skip over the open '['
+    chars.next();
+    let mut list: Vec<List> = Vec::new();
+    loop {
+      match chars.peek() {
+        Some(']') => { chars.next(); return Self::List(list); },
+        Some(',') => { chars.next(); },
+        Some(_) => { list.push(Self::parse_from_peekable(chars)); },
+        None => panic!("End of stream"),
       }
     }
-    posn += 1;
-    (Rc::new(List::List(list)), posn)
+   }
+
+  fn parse_from_peekable(chars: &mut Peekable<Chars>) -> Self {
+    match chars.peek() {
+      Some('0'..='9') => Self::parse_num(chars),
+      Some('[') => Self::parse_list(chars),
+      _ => panic!("Unknown char '{:?}'", chars.peek()),
+    }
   }
 
   fn parse(line: &str) -> Rc<Self> {
-    let chars: Vec<char> = line.trim().chars().collect();
-    let (val, next) = match chars[0] {
-      '0'..='9' => Self::parse_num(&chars),
-      '[' => Self::parse_list(&chars),
-      _ => panic!("Can't parse {}", line),
-    };
-    if next != chars.len() {
-      panic!("extra stuff in {} at {}", line, next);
-    }
-    val
+    let mut chars = line.chars().peekable();
+    Rc::new(Self::parse_from_peekable(&mut chars))
   }
 
-  fn make_list(val: i64) -> Vec<Rc<List>> {
-    vec![Rc::new(List::Int(val))]
+  fn make_list(val: i64) -> Vec<List> {
+    vec![List::Int(val)]
   }
 
-  fn list_cmp(left: &[Rc<List>], right: &[Rc<List>]) -> Ordering {
-    if left.len() == 0 {
-      if right.len() == 0 {
-        return Ordering::Equal
-      }
-      return Ordering::Less
-    } else if right.len() == 0 {
-      return Ordering::Greater
+  fn list_cmp(left: &[List], right: &[List]) -> Ordering {
+    match (left.len(), right.len()) {
+      (0, 0) => return Ordering::Equal,
+      (0, _) => return Ordering::Less,
+      (_, 0) => return Ordering::Greater,
+      (_, _) => (),
     }
-    let result = left[0].cmp(&right[0]);
-    if result != Ordering::Equal {
-      return result
+    match left[0].cmp(&right[0]) {
+      Ordering::Equal => Self::list_cmp(&left[1..], &right[1..]),
+      result => result,
     }
-    Self::list_cmp(&left[1..], &right[1..])
   }
 
+}
+
+impl PartialOrd<Self> for List {
+  fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+    Some(List::cmp(self, other))
+  }
+}
+
+impl Ord for List {
   fn cmp(&self, other: &Self) -> Ordering {
     match (self, other) {
       (Self::Int(l), Self::Int(r)) => l.cmp(r),
@@ -105,31 +107,27 @@ impl Display for List {
 }
 
 pub fn generator(input: &str) -> InputType {
-  input.split("\n\n")
-    .map(|pair| {
-      let (first, second) = pair.split_once("\n").unwrap();
-      (List::parse(first), List::parse(second))
-    }).collect()
+  input.lines()
+      .filter(|&l| l.len() > 0)
+      .map(|l| List::parse(l))
+      .collect()
 }
 
 pub fn part1(input: &InputType) -> OutputType {
-  input.iter().enumerate()
-    .filter(|(_, (l, r))| l.cmp(r) == Ordering::Less)
+  input.chunks(2)
+      .enumerate()
+    .filter(|(_, pairs)| pairs[0].cmp(&pairs[1]) == Ordering::Less)
     .map(|(idx, _)| idx + 1)
     .sum()
 }
 
 pub fn part2(input: &InputType) -> OutputType {
-  let mut list: Vec<Rc<List>> = Vec::new();
-  for (l, r) in input {
-    list.push(l.clone());
-    list.push(r.clone());
-  }
+  let mut list = input.clone();
   let dividers = vec![List::parse("[[2]]"), List::parse("[[6]]")];
   list.extend(dividers.iter().cloned());
-  list.sort_by(|l, r| l.cmp(r));
+  list.sort_unstable_by(|l, r| l.cmp(r));
   list.iter().enumerate()
-      .filter(|(_, l)| dividers.iter().any(|x| Rc::ptr_eq(x, l)))
+      .filter(|(_, l)| dividers.iter().any(|d| Rc::ptr_eq(l,d)))
       .map(|(i, _)| i + 1).product()
 }
 
