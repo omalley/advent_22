@@ -85,38 +85,70 @@ pub fn generator(input: &str) -> InputType {
   CrossSection::new(&ledges)
 }
 
+fn do_grain(filled: &mut Vec<Vec<bool>>, start: &Point, input: &InputType) -> bool {
+  let mut x = START.x;
+  if filled[start.y][start.x - input.left] {
+    return false
+  }
+  for y in START.y..input.height {
+    if filled[y+1][x - input.left] {
+      if filled[y+1][x - 1 - input.left] {
+        if filled[y+1][x + 1 - input.left] {
+          filled[y][x - input.left] = true;
+          return true
+        } else {
+          x += 1;
+        }
+      } else {
+        x -= 1;
+      }
+    }
+  }
+  false
+}
+
 const START: Point = Point{x: 500, y: 0};
 
 pub fn part1(input: &InputType) -> OutputType {
   let mut filled = input.ledges.clone();
-  'grain: for grain in 0..usize::MAX {
-    let mut x = START.x;
-    for y in START.y..input.height {
-      if filled[y+1][x - input.left] {
-        if filled[y+1][x - 1 - input.left] {
-          if filled[y+1][x + 1 - input.left] {
-            filled[y][x - input.left] = true;
-            continue 'grain;
-          } else {
-            x += 1;
-          }
-        } else {
-         x -= 1;
-        }
-      }
+  for grain in 0..usize::MAX {
+    if !do_grain(&mut filled, &START, input) {
+      return grain
     }
-    return grain
   }
   usize::MAX
 }
 
+fn add_floor(input: &CrossSection, start: &Point) -> CrossSection {
+  let height = input.height + 1;
+  let left = usize::min(start.x - height, input.left);
+  let right = usize::max(start.x + height, input.right);
+  let mut ledges = vec![vec![false; right - left + 1]; height + 1];
+  for x in input.left..=input.right {
+    for y in start.y..input.height {
+      ledges[y][x - left] = input.ledges[y][x - input.left];
+    }
+  }
+  for x in left..=right {
+    ledges[height][x - left] = true;
+  }
+  CrossSection{ledges, left, right, height}
+}
+
 pub fn part2(input: &InputType) -> OutputType {
-  0
+  let extended = add_floor(input, &START);
+  let mut filled = extended.ledges.clone();
+  for grain in 0..usize::MAX {
+    if !do_grain(&mut filled, &START, &extended) {
+      return grain
+    }
+  }
+  usize::MAX
 }
 
 #[cfg(test)]
 mod tests {
-  use crate::day14::{generator, CrossSection, part1, part2};
+  use crate::day14::{generator, part1, part2};
 
 
   #[test]
