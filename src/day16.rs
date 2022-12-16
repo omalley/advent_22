@@ -63,13 +63,11 @@ impl Caves {
     Caves{start, flows, distances}
   }
 
-  fn print_distances(&self) {
-    for row in &self.distances {
-      for dist in row {
-        print!("{dist:3}");
-      }
-      println!();
-    }
+  /// Get the u64/bitmap of the closed valves
+  fn get_closed(&self) -> u64 {
+    self.flows.iter().enumerate()
+      .filter(|(_, &f)| f > 0)
+      .fold(0, |acc, (i, _)| acc | (1 << i))
   }
 }
 
@@ -88,10 +86,8 @@ pub struct State {
 
 impl State {
   fn new(input: &Caves) -> Self {
-    let shut = input.flows.iter().enumerate()
-      .filter(|(_, &f)| f > 0)
-      .fold(0, |acc, (i, _)| acc | (1 << i));
-    State{shut, location: input.start, remaining_time: TIME_LIMIT, total_flow: 0}
+    State{shut: input.get_closed(), location: input.start, remaining_time: TIME_LIMIT,
+      total_flow: 0}
   }
 
   fn move_to(&self, dest: usize, caves: &Caves) -> Self {
@@ -134,13 +130,75 @@ pub fn part1(input: &InputType) -> OutputType {
   max
 }
 
-pub fn part2(_: &InputType) -> OutputType {
-  0
+const PART2_TIME: u64 = 26;
+const WORKERS: usize = 2;
+
+/// Now we have 2 workers (us and the elephant), so we
+/// need to track both.
+#[derive(Clone,Debug,Eq,Hash,PartialEq)]
+struct Part2State {
+  /// bit map of the valves we could open
+  shut: u64,
+  locations: [usize; WORKERS],
+  remaining_times: [u64; WORKERS],
+  total_flow: u64,
+}
+
+impl Part2State {
+  fn new(input: &Caves) -> Self {
+    Part2State{shut: input.get_closed(), locations: [input.start; WORKERS],
+      remaining_times: [PART2_TIME; WORKERS], total_flow: 0}
+  }
+
+  fn move_to(&self, worker: usize, dest: usize, caves: &Caves) -> Self {
+    let shut = self.shut & !(1 << dest);
+    let mut locations = self.locations;
+    locations[worker] = dest;
+    let mut remaining_times = self.remaining_times;
+    remaining_times[worker] -= caves.distances[self.locations[worker]][dest] as u64 + 1;
+    let total_flow = self.total_flow + remaining_times[worker] * caves.flows[dest];
+    Part2State{locations, shut, remaining_times, total_flow}
+  }
+
+  fn next(&self, caves: &Caves) -> Vec<Self> {
+    let mut result = Vec::new();
+    let max_time = *self.remaining_times.iter().max().unwrap();
+    let worker = self.remaining_times.iter().enumerate()
+      .find(|(_,&t)| t == max_time).unwrap().0;
+    let mut closed_valves = self.shut;
+    while closed_valves != 0 {
+      let zeros = closed_valves.trailing_zeros() as usize;
+      if caves.distances[self.locations[worker]][zeros] as u64 + 1 < self.remaining_times[worker] {
+        result.push(self.move_to(worker, zeros, caves));
+      }
+      closed_valves &= !(1 << zeros);
+    }
+    result
+  }
+}
+
+pub fn part2(input: &InputType) -> OutputType {
+  let mut queue = PriorityQueue::new();
+  queue.push(Part2State::new(input), 0);
+  let mut max = 0;
+  while !queue.is_empty() {
+    let (state, _) = queue.pop().unwrap();
+    let next = state.next(input);
+    if next.is_empty() {
+      max = max.max(state.total_flow);
+    } else {
+      for next_state in next {
+        let next_flow = next_state.total_flow;
+        queue.push(next_state, next_flow);
+      }
+    }
+  }
+  max
 }
 
 #[cfg(test)]
 mod tests {
-  use crate::day16::{generator, part1};
+  use crate::day16::{generator, part1, part2};
 
 
   #[test]
@@ -150,7 +208,7 @@ mod tests {
 
   #[test]
   fn test_part2() {
-    //assert_eq!(93, part2(&generator(INPUT)));
+    assert_eq!(1707, part2(&generator(INPUT)));
   }
 
   const INPUT: &str =
