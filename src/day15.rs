@@ -4,7 +4,7 @@ use std::ops::Range;
 type InputType = Vec<Sensor>;
 type OutputType = usize;
 
-#[derive(Clone,Debug)]
+#[derive(Clone,Debug,Eq,PartialEq)]
 struct Point {
   x: i64,
   y: i64,
@@ -99,13 +99,101 @@ pub fn part1(input: &InputType) -> OutputType {
   get_unavailable_at_row(input, 2_000_000)
 }
 
+/// Points that are rotated by 45 degrees
+#[derive(Clone,Debug)]
+struct SlantPoint {
+  diag_x: i64,
+  diag_y: i64,
+}
+
+impl SlantPoint {
+  fn from(pt: &Point) -> Self {
+    SlantPoint{diag_x: pt.x + pt.y, diag_y: pt.y - pt.x}
+  }
+
+  fn point(&self) -> Point {
+    Point{x: (self.diag_x - self.diag_y)/2, y: (self.diag_x + self.diag_y)/2}
+  }
+
+  fn is_valid(&self) -> bool {
+    (self.diag_x % 2 == 0) == (self.diag_y % 2 == 0)
+  }
+}
+
+#[derive(Clone,Debug)]
+struct SlantBox {
+  left: i64,
+  right: i64,
+  bottom: i64,
+  top: i64,
+}
+
+impl SlantBox {
+  fn from(sensor: &Sensor) -> Self {
+    let dist = sensor.min_distance();
+    let mid = SlantPoint::from(&sensor.location);
+    SlantBox{bottom: mid.diag_y - dist, top: mid.diag_y + dist + 1,
+      left: mid.diag_x - dist, right: mid.diag_x + dist + 1}
+  }
+}
+
+fn boxify(coord: i64, splits: &[i64]) -> usize {
+  match splits.iter().enumerate().find(|(_, &s)| s >= coord) {
+    None => splits.len(),
+    Some((i, _)) => i,
+  }
+}
+
+fn find_sensor(input: &InputType, x_range: Range<i64>, y_range: Range<i64>) -> Point {
+  let boxes: Vec<SlantBox> = input.iter().map(|s| SlantBox::from(s)).collect();
+  let slant_x_bounds = y_range.start + x_range.start .. x_range.end + y_range.end - 1;
+  let slant_y_bounds = y_range.start - x_range.end - 1 .. y_range.end - x_range.start;
+  let mut x_div: Vec<i64> = boxes.iter()
+      .flat_map(|b| vec![b.left, b.right].into_iter()).collect();
+  let mut y_div: Vec<i64> = boxes.iter()
+      .flat_map(|b| vec![b.bottom, b.top].into_iter()).collect();
+  x_div.push(slant_x_bounds.start);
+  y_div.push(slant_y_bounds.start);
+  x_div.sort_unstable();
+  x_div.dedup();
+  y_div.sort_unstable();
+  y_div.dedup();
+  x_div.retain(|x| slant_x_bounds.contains(x));
+  y_div.retain(|y| slant_y_bounds.contains(y));
+  let mut valid = vec![vec![true; x_div.len()]; y_div.len()];
+  for b in &boxes {
+    for x in boxify(b.left, &x_div)..boxify(b.right, &x_div) {
+      for y in boxify(b.bottom, &y_div)..boxify(b.top, &y_div) {
+        valid[y][x] = false;
+      }
+    }
+  }
+  for y in 0..valid.len(){
+    for x in 0..valid[y].len() {
+      if valid[y][x] {
+        let slant = SlantPoint{diag_x: x_div[x], diag_y: y_div[y]};
+        if slant.is_valid() {
+          let pt = slant.point();
+          if x_range.contains(&pt.x) && y_range.contains(&pt.y) {
+            return pt;
+          }
+        }
+      }
+    }
+  }
+  Point{x:0, y:0}
+}
+
+const PART2_LIMIT: i64 = 4_000_000;
+
 pub fn part2(input: &InputType) -> OutputType {
-  0
+  let pt = find_sensor(input, 0..PART2_LIMIT+1, 0..PART2_LIMIT+1);
+  (pt.x * PART2_LIMIT + pt.y) as usize
 }
 
 #[cfg(test)]
 mod tests {
-  use crate::day15::{generator, get_unavailable_at_row, part2};
+  use crate::day15::{find_sensor, generator, get_unavailable_at_row, Point};
 
 
   #[test]
@@ -116,7 +204,8 @@ mod tests {
 
   #[test]
   fn test_part2() {
-    //assert_eq!(93, part2(&generator(INPUT)));
+    assert_eq!(Point{x: 14, y:11},
+               find_sensor(&generator(INPUT), 0..21, 0..21));
   }
 
   const INPUT: &str = "Sensor at x=2, y=18: closest beacon is at x=-2, y=15\n\
