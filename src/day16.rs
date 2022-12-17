@@ -1,10 +1,11 @@
 use std::collections::HashMap;
-use priority_queue::PriorityQueue;
 
 type InputType = Caves;
 type OutputType = u64;
 
 const TIME_LIMIT: u64 = 30;
+const PART2_TIME: u64 = 26;
+const PART2_WORKERS: usize = 2;
 
 #[derive(Debug)]
 pub struct Valve {
@@ -112,26 +113,19 @@ impl State {
 }
 
 pub fn part1(input: &InputType) -> OutputType {
-  let mut queue = PriorityQueue::new();
-  queue.push(State::new(input), 0);
+  let mut queue = Vec::new();
+  queue.push(State::new(input));
   let mut max = 0;
-  while !queue.is_empty() {
-    let (state, _) = queue.pop().unwrap();
+  while let Some(state) = queue.pop() {
     let next = state.next(input);
     if next.is_empty() {
       max = max.max(state.total_flow);
     } else {
-      for next_state in next {
-        let next_flow = next_state.total_flow;
-        queue.push(next_state, next_flow);
-      }
+      queue.extend(next.into_iter());
     }
   }
   max
 }
-
-const PART2_TIME: u64 = 26;
-const WORKERS: usize = 2;
 
 /// Now we have 2 workers (us and the elephant), so we
 /// need to track both.
@@ -139,15 +133,15 @@ const WORKERS: usize = 2;
 struct Part2State {
   /// bit map of the valves we could open
   shut: u64,
-  locations: [usize; WORKERS],
-  remaining_times: [u64; WORKERS],
+  locations: [usize; PART2_WORKERS],
+  remaining_times: [u64; PART2_WORKERS],
   total_flow: u64,
 }
 
 impl Part2State {
   fn new(input: &Caves) -> Self {
-    Part2State{shut: input.get_closed(), locations: [input.start; WORKERS],
-      remaining_times: [PART2_TIME; WORKERS], total_flow: 0}
+    Part2State{shut: input.get_closed(), locations: [input.start; PART2_WORKERS],
+      remaining_times: [PART2_TIME; PART2_WORKERS], total_flow: 0}
   }
 
   fn move_to(&self, worker: usize, dest: usize, caves: &Caves) -> Self {
@@ -162,9 +156,9 @@ impl Part2State {
 
   fn next(&self, caves: &Caves) -> Vec<Self> {
     let mut result = Vec::new();
-    let max_time = *self.remaining_times.iter().max().unwrap();
     let worker = self.remaining_times.iter().enumerate()
-      .find(|(_,&t)| t == max_time).unwrap().0;
+      .fold((0, 0),
+            |acc, (i, &v)| if v > acc.1 { (i, v) } else { acc }).0;
     let mut closed_valves = self.shut;
     while closed_valves != 0 {
       let zeros = closed_valves.trailing_zeros() as usize;
@@ -178,19 +172,15 @@ impl Part2State {
 }
 
 pub fn part2(input: &InputType) -> OutputType {
-  let mut queue = PriorityQueue::new();
-  queue.push(Part2State::new(input), 0);
+  let mut queue = Vec::new();
+  queue.push(Part2State::new(input));
   let mut max = 0;
-  while !queue.is_empty() {
-    let (state, _) = queue.pop().unwrap();
+  while let Some(state) = queue.pop() {
     let next = state.next(input);
     if next.is_empty() {
       max = max.max(state.total_flow);
     } else {
-      for next_state in next {
-        let next_flow = next_state.total_flow;
-        queue.push(next_state, next_flow);
-      }
+      queue.extend(next.into_iter());
     }
   }
   max
