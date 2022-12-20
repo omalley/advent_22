@@ -6,6 +6,8 @@ type InputType = Vec<Blueprint>;
 type OutputType = usize;
 
 const TIME: Count = 24;
+const PART2_TIME: Count = 32;
+const PLAN_LIMIT: usize = 3;
 
 #[derive(Clone,Copy,Debug,EnumIter)]
 enum Resource {
@@ -63,11 +65,11 @@ struct State {
 }
 
 impl State {
-  fn default() -> Self {
+  fn new(time: Count) -> Self {
     let stock = [0; Resource::SIZE];
     let mut robots = [0; Resource::SIZE];
     robots[Resource::Ore.idx()] = 1;
-    State{remaining_time: TIME, stock, robots}
+    State{remaining_time: time, stock, robots}
   }
 
   fn get_priority(&self) -> usize {
@@ -136,9 +138,9 @@ impl State {
   }
 }
 
-fn best_score(blueprint: &Blueprint) -> Count {
+fn best_score(blueprint: &Blueprint, time: Count) -> Count {
   let mut pending = PriorityQueue::new();
-  pending.push(State::default(), 0);
+  pending.push(State::new(time), 0);
   let mut max = 0;
   while let Some((state, _)) = pending.pop() {
     if state.remaining_time == 0 {
@@ -154,11 +156,15 @@ fn best_score(blueprint: &Blueprint) -> Count {
 }
 
 pub fn part1(input: &InputType) -> OutputType {
-  input.iter().map(|bp| bp.id * best_score(bp) as usize).sum()
+  input.iter()
+      .map(|bp| bp.id * best_score(bp, TIME) as usize)
+      .sum()
 }
 
-pub fn part2(_input: &InputType) -> OutputType {
-  0
+pub fn part2(input: &InputType) -> OutputType {
+  input.iter().take(PLAN_LIMIT)
+      .map(|bp| best_score(bp, PART2_TIME) as usize)
+      .product()
 }
 
 #[cfg(test)]
@@ -174,7 +180,7 @@ mod tests {
 
   #[test]
   fn test_part2() {
-    assert_eq!(58, part2(&generator(INPUT)));
+    assert_eq!(3472, part2(&generator(INPUT)));
   }
 
   const INPUT: &str =
