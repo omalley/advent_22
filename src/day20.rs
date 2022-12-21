@@ -78,10 +78,6 @@ impl DoubleLinkedList {
   fn process(&mut self, node: Rc<RefCell<DoubleLinkedListNode>>) {
     let value = (node.borrow().value) % (self.size - 1) as Num;
     if value != 0 {
-      // If we are moving the first node, update the pointer
-      if Rc::ptr_eq(&self.start.as_ref().unwrap(), &node) {
-        self.start = Some(node.borrow().next.as_ref().unwrap().clone());
-      }
       // Get the new before and after nodes
       let new_prev = Self::seek(&node, value);
       let new_next = new_prev.borrow().next.as_ref().unwrap().clone();
@@ -165,8 +161,18 @@ pub fn part1(input: &InputType) -> OutputType {
   answer.iter().sum()
 }
 
-pub fn part2(_input: &InputType) -> OutputType {
-  0
+const DECRYPTION_KEY: Num = 811589153;
+const ITERATIONS: usize = 10;
+
+pub fn part2(input: &InputType) -> OutputType {
+  let mut list = DoubleLinkedList::default();
+  for n in input {
+    list.push(*n * DECRYPTION_KEY);
+  }
+  for _ in 0..ITERATIONS {
+    list.shuffle();
+  }
+  list.find_nodes(&[1000, 2000, 3000]).iter().sum()
 }
 
 #[cfg(test)]
@@ -182,7 +188,7 @@ mod tests {
 
   #[test]
   fn test_part2() {
-    assert_eq!(3472, part2(&generator(INPUT)));
+    assert_eq!(1623178306, part2(&generator(INPUT)));
   }
 
   const INPUT: &str = "1\n\
