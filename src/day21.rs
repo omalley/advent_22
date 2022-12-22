@@ -1,4 +1,6 @@
+use std::borrow::Borrow;
 use std::collections::HashMap;
+use std::rc::Rc;
 
 type InputType = Vec<Monkey>;
 type OutputType = Num;
@@ -12,6 +14,8 @@ enum Operation {
   Minus,
   Multiply,
   Divide,
+  Equals,
+  Human,
 }
 
 impl Operation {
@@ -22,6 +26,38 @@ impl Operation {
       "*" => Operation::Multiply,
       "/" => Operation::Divide,
       _ => panic!("Unknown character '{s}'"),
+    }
+  }
+
+  fn evaluate(&self, left: Num, right: Num) -> Num {
+    match self {
+      Operation::Literal(n) => *n,
+      Operation::Plus => left + right,
+      Operation::Minus => left - right,
+      Operation::Multiply => left * right,
+      Operation::Divide => left / right,
+      Operation::Equals => if left == right { 1 } else { 0 },
+      _ => panic!("Can't handle operation {self:?}"),
+    }
+  }
+
+  fn evaluate_for_left(&self, right: Num, result: Num) -> Num {
+    match self {
+      Operation::Plus => result - right,
+      Operation::Minus => result + right,
+      Operation::Multiply => result / right,
+      Operation::Divide => result * right,
+      _ => panic!("Can't handle operation {self:?}"),
+    }
+  }
+
+  fn evaluate_for_right(&self, left: Num, result: Num) -> Num {
+    match self {
+      Operation::Plus => result - left,
+      Operation::Minus => left - result,
+      Operation::Multiply => result / left,
+      Operation::Divide => left / result,
+      _ => panic!("Can't handle operation {self:?}"),
     }
   }
 }
@@ -91,6 +127,7 @@ impl Calculation {
       Operation::Divide => {
         result = Self::evaluate(results, results[monkey].parameters[0]) /
             Self::evaluate(results, results[monkey].parameters[1])},
+      _ => panic!("Can't handle {:?}", results[monkey].op),
     }
     results[monkey].cache = Some(result);
     result
@@ -115,8 +152,111 @@ pub fn part1(input: &InputType) -> OutputType {
   Calculation::evaluate(&mut calcs, *names.get(ROOT_NAME).unwrap())
 }
 
-pub fn part2(_input: &InputType) -> OutputType {
-  0
+const HUMAN_NAME: &str = "humn";
+
+#[derive(Clone,Debug)]
+enum SymbolicState {
+  Literal(Num),
+  Input,
+  Op(Operation, Rc<SymbolicState>, Rc<SymbolicState>)
+}
+
+impl SymbolicState {
+
+  /// Do constant folding for operations where both parameters are literals.
+  fn simplify(expr: SymbolicState) -> SymbolicState {
+    match &expr {
+      SymbolicState::Op(op, left, right) => {
+        match (left.borrow(), right.borrow()) {
+          (SymbolicState::Literal(l), SymbolicState::Literal(r)) => {
+            return SymbolicState::Literal(op.evaluate(*l, *r));
+          }
+          _ => { },
+        }
+      },
+      _ => { },
+    }
+    expr
+  }
+
+  fn evaluate(values: &mut [Option<Rc<SymbolicState>>], expr_idx: usize,
+              ops: &[Operation], params: &[Vec<usize>]) -> Rc<SymbolicState> {
+    let result = Rc::new(match ops[expr_idx] {
+      Operation::Literal(n) => SymbolicState::Literal(n),
+      Operation::Human => SymbolicState::Input,
+      op => Self::simplify(SymbolicState::Op(op,
+                                           Self::evaluate(values, params[expr_idx][0],
+                                                          ops, params),
+                                           Self::evaluate(values, params[expr_idx][1],
+                                                          ops, params))),
+    });
+    values[expr_idx] = Some(result.clone());
+    result
+  }
+
+  /// The expr must equal the given result, so simplify the expression as much
+  /// as possible.
+  fn reduce_equals(expr: Rc<SymbolicState>, result: Num) -> Rc<SymbolicState> {
+    let mut cur_result = result;
+    let mut cur_expr = expr;
+    loop {
+      match cur_expr.clone().borrow() {
+        SymbolicState::Op(op, left, right) => {
+          if let SymbolicState::Literal(n) = left.borrow() {
+            cur_expr = right.clone();
+            cur_result = op.evaluate_for_right(*n, cur_result);
+          } else if let SymbolicState::Literal(n) = right.borrow() {
+            cur_expr = left.clone();
+            cur_result = op.evaluate_for_left(*n, cur_result);
+          } else {
+            break;
+          }
+        },
+        _ => { break; }
+      }
+    }
+    Rc::new(SymbolicState::Op(Operation::Equals, cur_expr,
+                      Rc::new(SymbolicState::Literal(cur_result))))
+  }
+
+  fn reduce(expr: Rc<SymbolicState>) -> Rc<SymbolicState> {
+    match expr.borrow() {
+      SymbolicState::Op(Operation::Equals, left, right) => {
+        if let SymbolicState::Literal(n) = left.borrow() {
+          return Self::reduce_equals(right.clone(), *n);
+        }
+        if let SymbolicState::Literal(n) = right.borrow() {
+          return Self::reduce_equals(left.clone(), *n);
+        }
+      },
+      _ => {},
+    }
+    expr
+  }
+}
+
+pub fn part2(input: &InputType) -> OutputType {
+  let names = build_name_map(input);
+  // Copy over the operations where we can change them with overrides
+  let mut ops: Vec<Operation> = input.iter().map(|m| m.op).collect();
+  ops[*names.get(HUMAN_NAME).unwrap()] = Operation::Human;
+  ops[*names.get(ROOT_NAME).unwrap()] = Operation::Equals;
+  // build the list of params
+  let params: Vec<Vec<usize>> = input.iter()
+    .map(|m| m.parameters.iter().map(|p| *names.get(p).unwrap())
+      .collect::<Vec<usize>>())
+    .collect();
+  // Compute the symbolic values with a cache
+  let mut values: Vec<Option<Rc<SymbolicState>>> = vec![None; input.len()];
+  let ans = SymbolicState::reduce(SymbolicState::evaluate(&mut values,
+                                    *names.get(ROOT_NAME).unwrap(),
+                                    &ops, &params));
+  if let SymbolicState::Op(Operation::Equals, _, right) = ans.borrow() {
+    if let SymbolicState::Literal(n) = right.borrow() {
+      return *n;
+    }
+  }
+  panic!("Not simplified {ans:?}");
 }
 
 #[cfg(test)]
@@ -131,7 +271,7 @@ mod tests {
 
   #[test]
   fn test_part2() {
-    //assert_eq!(1623178306, part2(&generator(INPUT)));
+    assert_eq!(301, part2(&generator(INPUT)));
   }
 
   const INPUT: &str = "root: pppw + sjmn\n\
