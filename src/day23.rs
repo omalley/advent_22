@@ -60,12 +60,13 @@ pub fn generator(input: &str) -> InputType {
 struct State {
   elves: Vec<Position>,
   first_rule: usize,
+  turn: usize,
 }
 
 impl State {
   const NUM_RULES: usize = 4;
   fn new(input: &InputType) -> Self {
-    State{elves: input.elves.clone(), first_rule: 0}
+    State{elves: input.elves.clone(), first_rule: 0, turn: 0}
   }
 
   fn update_mask(mask: &mut u8, elf: Position, dir: Direction, locations: &HashSet<Position>) {
@@ -124,6 +125,7 @@ impl State {
       }
     }
     self.first_rule = (self.first_rule + 1) % Self::NUM_RULES;
+    self.turn += 1;
     result
   }
 
@@ -153,7 +155,7 @@ impl State {
 impl Display for State {
   fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
     let (x_range, y_range) = self.find_range();
-    write!(f, "x: {x_range:?}, y: {y_range:?}\n")?;
+    write!(f, "turn: {}, x: {x_range:?}, y: {y_range:?}\n", self.turn)?;
     let locs = self.elves.iter().cloned().collect::<HashSet<Position>>();
     for y in y_range.clone() {
       for x in x_range.clone() {
@@ -172,14 +174,18 @@ const NUM_TURNS: usize = 10;
 
 pub fn part1(input: &InputType) -> OutputType {
   let mut state = State::new(input);
-  for _turn in 0..NUM_TURNS {
+  for _ in 0..NUM_TURNS {
     state.everybody_move();
   }
   state.find_size() - input.elves.len() as OutputType
 }
 
-pub fn part2(_input: &InputType) -> OutputType {
-  0
+pub fn part2(input: &InputType) -> OutputType {
+  let mut state = State::new(input);
+  while state.everybody_move() {
+    // nothing
+  }
+  state.turn as OutputType
 }
 
 #[cfg(test)]
@@ -204,7 +210,7 @@ mod tests {
 
   #[test]
   fn test_part2() {
-    assert_eq!(5031, part2(&generator(INPUT)));
+    assert_eq!(20, part2(&generator(INPUT)));
   }
 
   const INPUT: &str =
