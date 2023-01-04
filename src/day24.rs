@@ -127,14 +127,13 @@ struct State<'a> {
   input: &'a InputType,
   turn: usize,
   locations: HashSet<Position>,
-  goal: Position,
 }
 
 impl<'a> State<'a> {
   fn new(input: &'a InputType) -> Self {
     let mut locations = HashSet::new();
     locations.insert(input.start);
-    State{input, turn: 0, locations, goal: input.end}
+    State{input, turn: 0, locations}
   }
 
   fn step(&mut self) {
@@ -149,21 +148,35 @@ impl<'a> State<'a> {
     self.turn += 1;
   }
 
-  fn done(&self) -> bool {
-    self.locations.contains(&self.goal)
+  fn done(&self, goal: Position) -> bool {
+    self.locations.contains(&goal)
   }
 }
 
 pub fn part1(input: &InputType) -> OutputType {
   let mut state = State::new(input);
-  while !state.done() {
+  while !state.done(input.end) {
     state.step();
   }
   state.turn
 }
 
-pub fn part2(_input: &InputType) -> OutputType {
-  0
+pub fn part2(input: &InputType) -> OutputType {
+  let mut state = State::new(input);
+  while !state.done(input.end) {
+    state.step();
+  }
+  state.locations.clear();
+  state.locations.insert(input.end);
+  while !state.done(input.start) {
+    state.step();
+  }
+  state.locations.clear();
+  state.locations.insert(input.start);
+  while !state.done(input.end) {
+    state.step();
+  }
+  state.turn
 }
 
 #[cfg(test)]
@@ -178,7 +191,7 @@ mod tests {
 
   #[test]
   fn test_part2() {
-    assert_eq!(20, part2(&generator(INPUT)));
+    assert_eq!(54, part2(&generator(INPUT)));
   }
 
   const INPUT: &str =
