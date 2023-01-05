@@ -20,6 +20,9 @@ strum_macros = "0.24"
 [dev-dependencies]
 criterion = "0.3"
 
+[profile.test]
+opt-level = 3
+
 # The "debug" profile
 [profile.release]
 panic = "abort"
