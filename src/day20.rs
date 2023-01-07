@@ -1,7 +1,3 @@
-use std::cell::RefCell;
-use std::fmt::{Display, Formatter};
-use std::rc::Rc;
-
 type InputType = Vec<Num>;
 type OutputType = Num;
 
@@ -11,101 +7,80 @@ pub fn generator(input: &str) -> InputType {
   input.lines().map(|l| l.parse::<Num>().unwrap()).collect()
 }
 
-type Link = Option<Rc<RefCell<DoubleLinkedListNode>>>;
-
+#[derive(Default)]
 struct DoubleLinkedListNode {
-  next: Link,
-  prev: Link,
-  original: Link,
   value: Num,
-}
-
-impl DoubleLinkedListNode {
-  fn new(value: Num) -> Self {
-    DoubleLinkedListNode{next: None, prev: None, original: None, value}
-  }
+  next: usize,
+  prev: usize,
 }
 
 #[derive(Default)]
 struct DoubleLinkedList {
-  start: Link,
-  zero: Link,
-  size: usize,
+  data: Vec<DoubleLinkedListNode>,
+  start: usize,
+  zero: Option<usize>,
 }
 
 impl DoubleLinkedList {
 
   /// Push to the back of the list
   fn push(&mut self, value: Num) {
-    self.size += 1;
-    let node = Rc::new(RefCell::new(DoubleLinkedListNode::new(value)));
+    let mut node = DoubleLinkedListNode::default();
+    if self.data.is_empty() {
+      self.start = 0;
+    } else {
+      let head = self.start;
+      let tail = self.data[head].prev;
+      let new_posn = self.data.len();
+      node.next = head;
+      node.prev = tail;
+      self.data[head].prev = new_posn;
+      self.data[tail].next = new_posn;
+    }
     if value == 0 {
-      self.zero = Some(node.clone());
+      self.zero = Some(self.data.len());
+    } else {
+      node.value = value;
     }
-    match &self.start {
-      Some(head) => {
-        let tail = &head.borrow().prev.as_ref().unwrap().clone();
-        node.borrow_mut().next = Some(head.clone());
-        node.borrow_mut().prev = Some(tail.clone());
-        head.borrow_mut().prev = Some(node.clone());
-        tail.borrow_mut().original = Some(node.clone());
-        tail.borrow_mut().next = Some(node.clone());
-      },
-      None => {
-        node.borrow_mut().prev = Some(node.clone());
-        node.borrow_mut().next = Some(node.clone());
-        self.start = Some(node.clone());
-      },
-    }
+    self.data.push(node);
   }
 
-  fn seek(node: &Rc<RefCell<DoubleLinkedListNode>>, count: Num) -> Rc<RefCell<DoubleLinkedListNode>> {
-    let mut ptr = node.clone();
+  fn seek(&self, node: usize, count: Num) -> usize {
+    let mut ptr = node;
     if count > 0 {
       for _ in 0..count {
-        let n = ptr.borrow().next.as_ref().unwrap().clone();
-        ptr = n;
+        ptr = self.data[ptr].next;
       }
     } else if count < 0 {
       for _ in count..=0 {
-        let n = ptr.borrow().prev.as_ref().unwrap().clone();
-        ptr = n;
+        ptr = self.data[ptr].prev;
       }
     }
     ptr
   }
 
-  fn process(&mut self, node: Rc<RefCell<DoubleLinkedListNode>>) {
-    let value = (node.borrow().value) % (self.size - 1) as Num;
+  fn process(&mut self, node: usize) {
+    let value = (self.data[node].value) % (self.data.len() - 1) as Num;
     if value != 0 {
       // Get the new before and after nodes
-      let new_prev = Self::seek(&node, value);
-      let new_next = new_prev.borrow().next.as_ref().unwrap().clone();
+      let new_prev = self.seek(node, value);
+      let new_next = self.data[new_prev].next;
       // Get the old before and after nodes
-      let old_prev = node.borrow().prev.as_ref().unwrap().clone();
-      let old_next = node.borrow().next.as_ref().unwrap().clone();
+      let old_prev = self.data[node].prev;
+      let old_next = self.data[node].next;
       // Fix up all of the links
-      new_prev.borrow_mut().next = Some(node.clone());
-      new_next.borrow_mut().prev = Some(node.clone());
-      node.borrow_mut().next = Some(new_next.clone());
-      node.borrow_mut().prev = Some(new_prev.clone());
-      old_prev.borrow_mut().next = Some(old_next.clone());
-      old_next.borrow_mut().prev = Some(old_prev.clone());
+      self.data[new_prev].next = node;
+      self.data[new_next].prev = node;
+      self.data[node].next = new_next;
+      self.data[node].prev = new_prev;
+      self.data[old_prev].next = old_next;
+      self.data[old_next].prev = old_prev;
     }
   }
 
   fn shuffle(&mut self) {
-    if let Some(head) = &self.start {
-      let mut ptr = head.clone();
-      loop {
-        self.process(ptr.clone());
-        if ptr.borrow().original.is_none() {
-          break
-        } else {
-          let next = ptr.borrow().original.as_ref().unwrap().clone();
-          ptr = next;
-        }
-      }
+    for ptr in 0..self.data.len() {
+      self.process(ptr);
     }
   }
 
@@ -115,39 +90,19 @@ impl DoubleLinkedList {
     if self.zero.is_none() {
       return result;
     }
-    let list_size = self.size as Num;
+    let list_size = self.data.len() as Num;
     let mut sorted_targets: Vec<Num> = targets.iter()
-        .map(|p| ((p % list_size) + list_size) % list_size)
+        .map(|&p| p.rem_euclid(list_size))
         .collect();
     sorted_targets.sort_unstable();
-    let mut current = self.zero.as_ref().unwrap().clone();
+    let mut current = self.zero.unwrap();
     let mut current_pos: Num = 0;
     for target in sorted_targets {
-      current = Self::seek(&current, target - current_pos);
-      result.push(current.borrow().value);
+      current = self.seek(current, target - current_pos);
+      result.push(self.data[current].value);
       current_pos = target;
     }
     result
-  }
-}
-
-impl Display for DoubleLinkedList {
-  fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-    write!(f, "[")?;
-    if let Some(head) = &self.start {
-      let mut ptr = head.clone();
-      loop {
-        write!(f, "{}", ptr.borrow().value)?;
-        let next = ptr.borrow().next.as_ref().unwrap().clone();
-        ptr = next;
-        if Rc::ptr_eq(&ptr, head) {
-          break;
-        } else {
-          write!(f, ",")?;
-        }
-      }
-    }
-    write!(f, "]")
   }
 }
 
