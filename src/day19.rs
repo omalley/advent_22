@@ -1,4 +1,3 @@
-use priority_queue::PriorityQueue;
 use strum::IntoEnumIterator;
 use strum_macros::EnumIter;
 
@@ -7,7 +6,7 @@ type OutputType = usize;
 
 const TIME: Count = 24;
 const PART2_TIME: Count = 32;
-const PLAN_LIMIT: usize = 3;
+const PART2_PLAN_LIMIT: usize = 3;
 
 #[derive(Clone,Copy,Debug,EnumIter)]
 enum Resource {
@@ -72,10 +71,6 @@ impl State {
     State{remaining_time: time, stock, robots}
   }
 
-  fn get_priority(&self) -> usize {
-    self.robots.iter().rev().fold(0, |acc, v| (acc << 16) | *v as usize)
-  }
-
   /// What resources will we have at the end of the time if
   /// we don't build a robot?
   fn gather(&mut self, minutes: Count) {
@@ -130,41 +125,68 @@ impl State {
       sit_around.gather(self.remaining_time);
       result.push(sit_around);
     }
-    /*println!("{self:?}");
-    for n in &result {
-      println!(" --> {n:?}");
-    }*/
     result
+  }
+
+  fn gather_upper_limit(turns: Count) -> Count {
+    turns * (turns + 1) / 2
+  }
+
+  fn turns_to_gather(resource: Count) -> Count {
+    let mut remain = resource;
+    let mut result = 1;
+    while remain > result {
+      remain -= result;
+    }
+    result + 1
+  }
+
+  /// What is the upper bound on how high a score we can get from here.
+  fn limit(&self, blueprint: &Blueprint) -> Count {
+    let mut turns_to_build = 0;
+    for rbt in Resource::iter() {
+      if self.robots[rbt.idx()] == 0 {
+//        turns_to_build += 1 + Self::turns_to_gather(blueprint.robot[rbt.idx()][])
+      }
+    }
+    0
   }
 }
 
-fn best_score(blueprint: &Blueprint, time: Count) -> Count {
-  let mut pending = PriorityQueue::new();
-  pending.push(State::new(time), 0);
+fn best_score(blueprint: &Blueprint, time: Count, state_count: &mut usize) -> Count {
+  let mut pending = Vec::new();
+  pending.push(State::new(time));
   let mut max = 0;
-  while let Some((state, _)) = pending.pop() {
+  while let Some(state) = pending.pop() {
+    *state_count += 1;
     if state.remaining_time == 0 {
+      let old_max = max;
       max = Count::max(max, state.stock[Resource::Geode.idx()]);
-    } else {
-      for next in state.next(blueprint).into_iter() {
-        let priority = next.get_priority();
-        pending.push(next, priority);
+      if old_max != max {
+        println!("max {old_max} to {max} at {state_count}");
       }
+    } else {
+      pending.extend_from_slice(&state.next(blueprint));
     }
   }
   max
 }
 
 pub fn part1(input: &InputType) -> OutputType {
+  let mut state_count = 0;
   input.iter()
-      .map(|bp| bp.id * best_score(bp, TIME) as usize)
+      .map(|bp| bp.id * best_score(bp, TIME, &mut state_count) as usize)
       .sum()
 }
 
 pub fn part2(input: &InputType) -> OutputType {
-  input.iter().take(PLAN_LIMIT)
-      .map(|bp| best_score(bp, PART2_TIME) as usize)
-      .product()
+  let mut state_count = 0;
+  let result =
+  input.iter().take(PART2_PLAN_LIMIT)
+      .map(|bp| best_score(bp, PART2_TIME, &mut state_count) as usize)
+      .product();
+  println!("part 2 = {state_count}");
+  result
 }
 
 #[cfg(test)]
