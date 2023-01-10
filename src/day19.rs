@@ -153,12 +153,14 @@ impl State {
   }
 }
 
-fn best_score(blueprint: &Blueprint, time: Count, state_count: &mut usize) -> Count {
+fn best_score(blueprint: &Blueprint, time: Count) -> Count {
+  println!("Blueprint {}", blueprint.id);
+  let mut state_count: usize = 0;
   let mut pending = Vec::new();
   pending.push(State::new(time));
   let mut max = 0;
   while let Some(state) = pending.pop() {
-    *state_count += 1;
+    state_count += 1;
     if state.remaining_time == 0 {
       let old_max = max;
       max = Count::max(max, state.stock[Resource::Geode.idx()]);
@@ -166,27 +168,22 @@ fn best_score(blueprint: &Blueprint, time: Count, state_count: &mut usize) -> Co
         println!("max {old_max} to {max} at {state_count}");
       }
     } else {
-      pending.extend_from_slice(&state.next(blueprint));
+      pending.extend(state.next(blueprint).into_iter());
     }
   }
   max
 }
 
 pub fn part1(input: &InputType) -> OutputType {
-  let mut state_count = 0;
   input.iter()
-      .map(|bp| bp.id * best_score(bp, TIME, &mut state_count) as usize)
+      .map(|bp| bp.id * best_score(bp, TIME) as usize)
       .sum()
 }
 
 pub fn part2(input: &InputType) -> OutputType {
-  let mut state_count = 0;
-  let result =
   input.iter().take(PART2_PLAN_LIMIT)
-      .map(|bp| best_score(bp, PART2_TIME, &mut state_count) as usize)
-      .product();
-  println!("part 2 = {state_count}");
-  result
+      .map(|bp| best_score(bp, PART2_TIME) as usize)
+      .product()
 }
 
 #[cfg(test)]
