@@ -76,26 +76,49 @@ pub fn generator(input: &str) -> InputType {
   Caves::parse(input)
 }
 
-#[derive(Clone,Debug,Eq,Hash,PartialEq)]
-pub struct State {
-  /// bit map of the valves we could open
+/// Define the interface for this problem's state types.
+trait State {
+  /// The type itself, so that we don't need to box the results
+  /// of next.
+  type Data: State;
+  /// What is the score for this state?
+  fn score(&self) -> u64;
+  /// Which states are reachable from this one?
+  fn next(&self, caves: &Caves) -> Vec<Self::Data>;
+}
+
+#[derive(Clone,Debug)]
+pub struct Part1 {
+  /// bit map of the valves that are still closed
   shut: u64,
   location: usize,
   remaining_time: u64,
   total_flow: u64,
 }
 
-impl State {
+impl Part1 {
   fn new(input: &Caves) -> Self {
-    State{shut: input.get_closed(), location: input.start, remaining_time: TIME_LIMIT,
-      total_flow: 0}
+    Part1 {
+      shut: input.get_closed(),
+      location: input.start,
+      remaining_time: TIME_LIMIT,
+      total_flow: 0,
+    }
   }
 
   fn move_to(&self, dest: usize, caves: &Caves) -> Self {
     let shut = self.shut & !(1 << dest);
     let remaining_time = self.remaining_time - caves.distances[self.location][dest] as u64 - 1;
     let total_flow = self.total_flow + remaining_time * caves.flows[dest];
-    State{location: dest, shut, remaining_time, total_flow}
+    Part1 { location: dest, shut, remaining_time, total_flow }
+  }
+}
+
+impl State for Part1 {
+  type Data = Part1;
+
+  fn score(&self) -> u64 {
+    self.total_flow
   }
 
   fn next(&self, caves: &Caves) -> Vec<Self> {
@@ -112,36 +135,45 @@ impl State {
   }
 }
 
-pub fn part1(input: &InputType) -> OutputType {
+/// Generic routine that searches for the highest score from
+/// the given initial state.
+fn search<T: State<Data=T>>(caves: &Caves, initial: T) -> OutputType {
   let mut queue = Vec::new();
-  queue.push(State::new(input));
+  queue.push(initial);
   let mut max = 0;
   while let Some(state) = queue.pop() {
-    let next = state.next(input);
-    if next.is_empty() {
-      max = max.max(state.total_flow);
-    } else {
+    max = max.max(state.score());
+    let next: Vec<T> = state.next(caves);
+    if !next.is_empty() {
       queue.extend(next.into_iter());
     }
   }
   max
 }
 
+pub fn part1(input: &InputType) -> OutputType {
+  search(input, Part1::new(input))
+}
+
 /// Now we have 2 workers (us and the elephant), so we
 /// need to track both.
-#[derive(Clone,Debug,Eq,Hash,PartialEq)]
-struct Part2State {
-  /// bit map of the valves we could open
+#[derive(Clone,Debug)]
+struct Part2 {
+  /// bit map of the valves that are still closed
   shut: u64,
   locations: [usize; PART2_WORKERS],
   remaining_times: [u64; PART2_WORKERS],
   total_flow: u64,
 }
 
-impl Part2State {
+impl Part2 {
   fn new(input: &Caves) -> Self {
-    Part2State{shut: input.get_closed(), locations: [input.start; PART2_WORKERS],
-      remaining_times: [PART2_TIME; PART2_WORKERS], total_flow: 0}
+    Part2 {
+      shut: input.get_closed(),
+      locations: [input.start; PART2_WORKERS],
+      remaining_times: [PART2_TIME; PART2_WORKERS],
+      total_flow: 0,
+    }
   }
 
   fn move_to(&self, worker: usize, dest: usize, caves: &Caves) -> Self {
@@ -151,7 +183,15 @@ impl Part2State {
     let mut remaining_times = self.remaining_times;
     remaining_times[worker] -= caves.distances[self.locations[worker]][dest] as u64 + 1;
     let total_flow = self.total_flow + remaining_times[worker] * caves.flows[dest];
-    Part2State{locations, shut, remaining_times, total_flow}
+    Part2 { locations, shut, remaining_times, total_flow }
+  }
+}
+
+impl State for Part2 {
+  type Data = Part2;
+
+  fn score(&self) -> u64 {
+    self.total_flow
   }
 
   fn next(&self, caves: &Caves) -> Vec<Self> {
@@ -172,24 +212,12 @@ impl Part2State {
 }
 
 pub fn part2(input: &InputType) -> OutputType {
-  let mut queue = Vec::new();
-  queue.push(Part2State::new(input));
-  let mut max = 0;
-  while let Some(state) = queue.pop() {
-    let next = state.next(input);
-    if next.is_empty() {
-      max = max.max(state.total_flow);
-    } else {
-      queue.extend(next.into_iter());
-    }
-  }
-  max
+  search(input, Part2::new(input))
 }
 
 #[cfg(test)]
 mod tests {
   use crate::day16::{generator, part1, part2};
-
 
   #[test]
   fn test_part1() {
