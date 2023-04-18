@@ -70,6 +70,14 @@ impl Caves {
       .filter(|(_, &f)| f > 0)
       .fold(0, |acc, (i, _)| acc | (1 << i))
   }
+
+  /// Get the sum of the remaining flows.
+  fn get_flow_sum(&self, shut: u64) -> u64 {
+    self.flows.iter().enumerate()
+      .filter(|&(i, &f)| f > 0 && shut & (1 << i) != 0)
+      .map(|(_, &f)| f)
+      .sum()
+  }
 }
 
 pub fn generator(input: &str) -> InputType {
@@ -81,10 +89,12 @@ trait State {
   /// The type itself, so that we don't need to box the results
   /// of next.
   type Data: State;
-  /// What is the score for this state?
-  fn score(&self) -> u64;
   /// Which states are reachable from this one?
   fn next(&self, caves: &Caves) -> Vec<Self::Data>;
+  /// What is the score for this state?
+  fn score(&self) -> u64;
+  /// What is the estimated upper bound on this state?
+  fn upper_bound(&self, caves: &Caves) -> u64;
 }
 
 #[derive(Clone,Debug)]
@@ -117,10 +127,6 @@ impl Part1 {
 impl State for Part1 {
   type Data = Part1;
 
-  fn score(&self) -> u64 {
-    self.total_flow
-  }
-
   fn next(&self, caves: &Caves) -> Vec<Self> {
     let mut result = Vec::new();
     let mut closed_valves = self.shut;
@@ -132,6 +138,18 @@ impl State for Part1 {
       closed_valves &= !(1 << zeros);
     }
     result
+  }
+
+  fn score(&self) -> u64 {
+    self.total_flow
+  }
+
+  fn upper_bound(&self, caves: &Caves) -> u64 {
+    if self.remaining_time > 0 {
+      self.total_flow + self.remaining_time * caves.get_flow_sum(self.shut)
+    } else {
+      self.total_flow
+    }
   }
 }
 
@@ -145,7 +163,7 @@ fn search<T: State<Data=T>>(caves: &Caves, initial: T) -> OutputType {
     max = max.max(state.score());
     let next: Vec<T> = state.next(caves);
     if !next.is_empty() {
-      queue.extend(next.into_iter());
+      queue.extend(next.into_iter().filter(|s| s.upper_bound(caves) > max));
     }
   }
   max
@@ -190,10 +208,6 @@ impl Part2 {
 impl State for Part2 {
   type Data = Part2;
 
-  fn score(&self) -> u64 {
-    self.total_flow
-  }
-
   fn next(&self, caves: &Caves) -> Vec<Self> {
     let mut result = Vec::new();
     let worker = self.remaining_times.iter().enumerate()
@@ -208,6 +222,19 @@ impl State for Part2 {
       closed_valves &= !(1 << zeros);
     }
     result
+  }
+
+  fn score(&self) -> u64 {
+    self.total_flow
+  }
+
+  fn upper_bound(&self, caves: &Caves) -> u64 {
+    let remaining_time = *self.remaining_times.iter().max().unwrap();
+    if remaining_time > 0 {
+      self.total_flow + remaining_time * caves.get_flow_sum(self.shut)
+    } else {
+      self.total_flow
+    }
   }
 }
 
