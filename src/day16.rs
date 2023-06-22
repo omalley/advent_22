@@ -72,7 +72,7 @@ impl Caves {
   }
 
   /// Get the sum of the remaining flows.
-  fn get_flow_sum(&self, shut: u64) -> u64 {
+  fn get_available_flow(&self, shut: u64) -> u64 {
     self.flows.iter().enumerate()
       .filter(|&(i, &f)| f > 0 && shut & (1 << i) != 0)
       .map(|(_, &f)| f)
@@ -145,8 +145,9 @@ impl State for Part1 {
   }
 
   fn upper_bound(&self, caves: &Caves) -> u64 {
-    if self.remaining_time > 0 {
-      self.total_flow + self.remaining_time * caves.get_flow_sum(self.shut)
+    let remaining_time = self.remaining_time;
+    if remaining_time > 1 {
+      self.total_flow + (remaining_time - 1) * caves.get_available_flow(self.shut)
     } else {
       self.total_flow
     }
@@ -229,9 +230,9 @@ impl State for Part2 {
   }
 
   fn upper_bound(&self, caves: &Caves) -> u64 {
-    let remaining_time = *self.remaining_times.iter().max().unwrap();
-    if remaining_time > 0 {
-      self.total_flow + remaining_time * caves.get_flow_sum(self.shut)
+    let remaining_time = *self.remaining_times.iter().min().unwrap();
+    if remaining_time > 1 {
+      self.total_flow + (remaining_time - 1) * caves.get_available_flow(self.shut)
     } else {
       self.total_flow
     }
