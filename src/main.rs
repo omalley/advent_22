@@ -59,7 +59,7 @@ macro_rules! main {
     ) => {
         // Inputs need to be in this format to work with `cargo aoc input`.
         const DAYS: &[&str] = &[$(stringify!($day)),*];
-        const INPUTS : &[&str] = &[$(include_str!(concat!("../input/", stringify!($year), "/", stringify!($day), ".txt"))),*];
+        const INPUTS : &[&str] = &[$(include_str!(concat!("../input/", stringify!($day), ".txt"))),*];
 
         fn main() {
             let args: Args = argh::from_env();
