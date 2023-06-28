@@ -5,8 +5,6 @@ use std::time::Instant;
 use argh::FromArgs;
 use colored::*;
 
-use omalley_aoc2022::*;
-
 #[derive(FromArgs)]
 /** Advent of Code (https://adventofcode.com/)
 */
@@ -54,31 +52,30 @@ fn time<T>(func: &dyn Fn() -> T) -> (Duration, T) {
 #[macro_export]
 macro_rules! main {
     (
-        year: $year: expr,
         implemented_days: [$($day:ident),+ $(,)?]
     ) => {
+        $(pub mod $day;)+
         // Inputs need to be in this format to work with `cargo aoc input`.
         const DAYS: &[&str] = &[$(stringify!($day)),*];
         const INPUTS : &[&str] = &[$(include_str!(concat!("../input/", stringify!($day), ".txt"))),*];
 
         fn main() {
             let args: Args = argh::from_env();
+            let days = match args.day {
+                Some(day) => {
+                    assert!(DAYS.contains(&format!("day{}", day).as_ref()), "Requested an unimplemented day");
+                    vec![day]
+                },
+                None => DAYS.iter().map(|s| s[3..].parse().expect("Weird looking day")).collect()
+            };
 
             let (elapsed, _) = time(&|| {
-                let days = match args.day {
-                    Some(day) => {
-                        assert!(DAYS.contains(&format!("day{}", day).as_ref()), "Requested an unimplemented day");
-                        vec![day]
-                    },
-                    None => DAYS.iter().map(|s| s[3..].parse().expect("Weird looking day")).collect()
-                };
-
-                for day in days.into_iter() {
+                for day in days.iter() {
                     let module_name = format!("day{}", day);
 
                     match module_name.as_ref() {
                         $(stringify!($day) => {
-                            let data = INPUTS[day as usize - 1];
+                            let data = INPUTS[*day as usize - 1];
 
                             let (gen_elapsed, input) = time(&|| $day::generator(&data));
                             let (p1_elapsed, p1_result) = time(&|| $day::part1(&input));
@@ -104,7 +101,6 @@ macro_rules! main {
 }
 
 main! {
-    year: 2022,
     implemented_days: [
         day1,
         day2,
