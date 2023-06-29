@@ -1,25 +1,15 @@
 use criterion::{criterion_group, criterion_main, Criterion};
+use omalley_aoc2022::{INPUTS, NAMES};
 
 macro_rules! benchmarks {
-    (
-        year: $year:expr,
-        bench_day: $day:ident
-    ) => {
-        // Inputs need to be in this format to work with `cargo aoc input`.
-        const DATA: &str = include_str!(concat!(
-            "../input/",
-            stringify!($year),
-            "/",
-            stringify!($day),
-            ".txt"
-        ));
+    ($day:ident) => {
 
         fn benchmark_function(c: &mut Criterion) {
             use omalley_aoc2022::$day;
-
-            let input = $day::generator(&DATA);
+            let posn = NAMES.iter().position(|n| *n == stringify!($day)).expect("Unknown day");
+            let input = $day::generator(INPUTS[posn]);
             c.bench_function(concat!(stringify!($day), " gen"), |b| {
-                b.iter(|| $day::generator(&DATA))
+                b.iter(|| $day::generator(INPUTS[posn]))
             });
             c.bench_function(concat!(stringify!($day), " part 1"), |b| {
                 b.iter(|| $day::part1(&input))
@@ -31,10 +21,7 @@ macro_rules! benchmarks {
     };
 }
 
-benchmarks! {
-    year: 2022,
-    bench_day: day13
-}
+benchmarks!(day19);
 
 criterion_group!(benches, benchmark_function);
 criterion_main!(benches);
