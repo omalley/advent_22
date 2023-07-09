@@ -43,23 +43,30 @@ pub fn time<T>(func: &dyn Fn() -> T) -> (time::Duration, T) {
     (start.elapsed(), result)
 }
 
-/// Parse a day name to get the number.
-fn parse_day(name: &str) -> u32 {
-    name[3..].parse().expect("badly formatted day name")
-}
-
 /// The times and results of running a day's code.
 pub struct DayResult {
-    day: u32,
+    pub day: String,
     generate_time: time::Duration,
     part1: (time::Duration, String),
     part2: (time::Duration, String),
 }
 
+impl DayResult {
+  /// Return the pretty name for the day
+  pub fn pretty_day(&self) -> String {
+    self.day.replace("day", "Day ")
+  }
+
+  /// Get the answers without the times
+  pub fn get_answers(&self) -> Vec<String> {
+    vec![self.part1.1.to_string(), self.part2.1.to_string()]
+  }
+}
+
 impl fmt::Display for DayResult {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let duration = format!("({:.2?})", self.generate_time + self.part1.0 + self.part2.0);
-        writeln!(f, "{} {}", format!("Day {}", self.day).bold(), duration.dimmed())?;
+        writeln!(f, "{} {}", self.pretty_day().bold(), duration.dimmed())?;
         pretty_print(f," · Generator", self.generate_time, None)?;
         pretty_print(f, " · Part 1", self.part1.0, Some(&self.part1.1))?;
         pretty_print(f, " · Part 2", self.part2.0, Some(&self.part2.1))
@@ -78,7 +85,7 @@ macro_rules! day_list {
                 let (generate_time, input) = time(&|| $day::generator(data));
                 let part1 = time(&|| $day::part1(&input));
                 let part2 = time(&|| $day::part2(&input));
-                DayResult{day: parse_day(stringify!($day)),
+                DayResult{day: stringify!($day).to_string(),
                           generate_time,
                           part1: (part1.0, part1.1.to_string()),
                           part2: (part2.0, part2.1.to_string())}},)+
