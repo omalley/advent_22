@@ -1,7 +1,8 @@
 use std::collections::BTreeMap;
 use argh::FromArgs;
 use colored::Colorize;
-use omalley_aoc2022::{DayResult,FUNCS,INPUTS,NAMES,time};
+use omalley_aoc2022::{FUNCS,INPUTS,NAMES};
+use omalley_aoc2022::utils::{DayResult,time};
 use serde::{Deserialize,Serialize};
 
 #[derive(FromArgs)]
