@@ -1,8 +1,7 @@
+use colored::Colorize;
 use std::cmp::min;
 use std::fmt;
 use std::time;
-
-use colored::Colorize;
 
 /// Format the output of each line of the output.
 /// Includes the category, time, and result.
@@ -74,10 +73,10 @@ impl fmt::Display for DayResult {
 }
 
 #[macro_export]
-macro_rules! day_list {
-    ( $($day:ident),+ $(,)?) => {
+macro_rules! day_list_internal {
+    ( $($day:ident),*) => {
         // Each day's code should be in src/day?.rs.
-        $(pub mod $day;)+
+        $(pub mod $day;)*
 
         /// Build a lambda to run each day's code
         pub const FUNCS : &[&dyn Fn(&str) -> crate::utils::DayResult] = &[
@@ -88,7 +87,7 @@ macro_rules! day_list {
                 crate::utils::DayResult{day: stringify!($day).to_string(),
                           generate_time,
                           part1: (part1.0, part1.1.to_string()),
-                          part2: (part2.0, part2.1.to_string())}},)+
+                          part2: (part2.0, part2.1.to_string())}},)*
         ];
 
         /// Define the list of implemented day names.
@@ -96,6 +95,15 @@ macro_rules! day_list {
 
         /// Load the inputs for each day into an array.
         pub const INPUTS: &[&str] = &[$(include_str!(concat!("../input/", stringify!($day), ".txt"))),*];
-}}
+    }
+}
 
+#[macro_export]
+macro_rules! day_list {
+  ( $($day:literal),* ) => {
+    paste::paste!{ crate::utils::day_list_internal!{$( [<day $day>] ),*} }
+  }
+}
+
+pub use day_list_internal;
 pub use day_list;
