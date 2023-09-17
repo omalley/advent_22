@@ -1,15 +1,21 @@
-use std::collections::BTreeMap;
 use argh::FromArgs;
 use colored::Colorize;
 use omalley_aoc2022::{FUNCS,INPUTS,NAMES};
 use omalley_aoc2022::utils::{DayResult,time};
 use serde::{Deserialize,Serialize};
+use std::collections::BTreeMap;
+use std::{fs, io};
+use std::path::Path;
 
 #[derive(FromArgs)]
 /** Solution for Advent of Code (https://adventofcode.com/)*/
 struct Args {
-  /// A single day to execute (all days by default)
-  #[argh(option, short = 'd')]
+  /// the input directory
+  #[argh(option, short='i')]
+  input: Option<String>,
+
+  /// a single day to execute (defaults to all)
+  #[argh(positional)]
   day: Option<usize>,
 }
 
@@ -23,7 +29,7 @@ impl Answers {
   const FILENAME: &'static str = "answers.yml";
 
   fn read() -> Self {
-    if let Ok(f) = std::fs::File::open(Self::FILENAME) {
+    if let Ok(f) = fs::File::open(Self::FILENAME) {
       serde_yaml::from_reader(f).expect("Could not read answers")
     } else {
       Self::default()
@@ -54,6 +60,17 @@ impl Answers {
   }
 }
 
+/// Read the data files from the in_dir into a vector of string.
+fn read_inputs(in_dir: &str) -> io::Result<Vec<String>> {
+  let data: Vec<io::Result<String>> = NAMES.iter()
+    .map(|&day| {
+      let filename = format!("{in_dir}/{day}.txt");
+      fs::read_to_string(Path::new(&filename))
+    })
+    .collect();
+  data.into_iter().collect()
+}
+
 fn main() {
     let args: Args = argh::from_env();
     // Did the user pick a single day to run
@@ -65,11 +82,18 @@ fn main() {
         },
         None => None
     };
+    let inputs: Vec<String>;
+    if let Some(in_dir) = &args.input {
+      println!("{} {}\n", "Reading from".bold(), in_dir);
+      inputs = read_inputs(&in_dir).expect("Can't read input dir")
+    } else {
+      inputs = INPUTS.iter().map(|&s| s.to_string()).collect()
+    };
 
      let (elapsed, results) = time(&|| {
         crate::FUNCS.iter().enumerate()
           .filter(|(p, _)| day_filter.is_none() || day_filter.unwrap() == *p)
-          .map(|(p, f)| f(INPUTS[p]))
+          .map(|(p, f)| f(&inputs[p]))
           .collect::<Vec<DayResult>>()
     });
 
