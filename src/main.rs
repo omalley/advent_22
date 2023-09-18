@@ -1,6 +1,6 @@
 use argh::FromArgs;
 use colored::Colorize;
-use omalley_aoc2022::{FUNCS,INPUTS,NAMES};
+use omalley_aoc2022::{FUNCS,NAMES};
 use omalley_aoc2022::utils::{DayResult,time};
 use serde::{Deserialize,Serialize};
 use std::collections::BTreeMap;
@@ -11,8 +11,8 @@ use std::path::Path;
 /** Solution for Advent of Code (https://adventofcode.com/)*/
 struct Args {
   /// the input directory
-  #[argh(option, short='i')]
-  input: Option<String>,
+  #[argh(option, short='i', default="String::from(\"input\")")]
+  input: String,
 
   /// a single day to execute (defaults to all)
   #[argh(positional)]
@@ -26,10 +26,12 @@ struct Answers {
 }
 
 impl Answers {
-  const FILENAME: &'static str = "answers.yml";
+  fn make_filename(directory: &str) -> String {
+    Path::new(directory).join("answers.yml").to_string_lossy().to_string()
+  }
 
-  fn read() -> Self {
-    if let Ok(f) = fs::File::open(Self::FILENAME) {
+  fn read(directory: &str) -> Self {
+    if let Ok(f) = fs::File::open(Self::make_filename(directory)) {
       serde_yaml::from_reader(f).expect("Could not read answers")
     } else {
       Self::default()
@@ -49,12 +51,12 @@ impl Answers {
     }
   }
 
-  fn write(&self) {
+  fn write(&self, directory: &str) {
     let f = std::fs::OpenOptions::new()
       .write(true)
       .create(true)
       .truncate(true)
-      .open(Self::FILENAME)
+      .open(Self::make_filename(directory))
       .expect("Couldn't open file");
     serde_yaml::to_writer(f, self).unwrap();
   }
@@ -82,15 +84,11 @@ fn main() {
         },
         None => None
     };
-    let inputs: Vec<String>;
-    if let Some(in_dir) = &args.input {
-      println!("{} {}\n", "Reading from".bold(), in_dir);
-      inputs = read_inputs(&in_dir).expect("Can't read input dir")
-    } else {
-      inputs = INPUTS.iter().map(|&s| s.to_string()).collect()
-    };
+    // Read the inputs from the given directory
+    println!("{} {}\n", "Reading from".bold(), &args.input);
+    let inputs = read_inputs(&args.input).expect("Can't read input dir");
 
-     let (elapsed, results) = time(&|| {
+    let (elapsed, results) = time(&|| {
         crate::FUNCS.iter().enumerate()
           .filter(|(p, _)| day_filter.is_none() || day_filter.unwrap() == *p)
           .map(|(p, f)| f(&inputs[p]))
@@ -102,7 +100,7 @@ fn main() {
     }
     println!("{} {}", "Overall runtime".bold(), format!("({:.2?})", elapsed).dimmed());
 
-    let mut old_answers = Answers::read();
+    let mut old_answers = Answers::read(&args.input);
     old_answers.update(&results);
-    old_answers.write();
+    old_answers.write(&args.input);
 }

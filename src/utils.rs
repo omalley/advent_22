@@ -92,9 +92,6 @@ macro_rules! day_list_internal {
 
         /// Define the list of implemented day names.
         pub const NAMES: &[&str] = &[$(stringify!($day)),*];
-
-        /// Load the inputs for each day into an array.
-        pub const INPUTS: &[&str] = &[$(include_str!(concat!("../input/", stringify!($day), ".txt"))),*];
     }
 }
 
