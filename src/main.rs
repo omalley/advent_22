@@ -1,10 +1,10 @@
+use omalley_aoc2022::{FUNCS,NAMES,utils};
+
 use argh::FromArgs;
 use colored::Colorize;
-use omalley_aoc2022::{FUNCS,NAMES};
-use omalley_aoc2022::utils::{DayResult,time};
 use serde::{Deserialize,Serialize};
 use std::collections::BTreeMap;
-use std::{fs, io};
+use std::fs::File;
 use std::path::Path;
 
 #[derive(FromArgs)]
@@ -31,14 +31,14 @@ impl Answers {
   }
 
   fn read(directory: &str) -> Self {
-    if let Ok(f) = fs::File::open(Self::make_filename(directory)) {
+    if let Ok(f) = File::open(Self::make_filename(directory)) {
       serde_yaml::from_reader(f).expect("Could not read answers")
     } else {
       Self::default()
     }
   }
 
-  fn update(&mut self, delta_list: &Vec<DayResult>) {
+  fn update(&mut self, delta_list: &Vec<utils::DayResult>) {
     for delta in delta_list {
       let new_val = delta.get_answers();
       if let Some(prev) =
@@ -62,17 +62,6 @@ impl Answers {
   }
 }
 
-/// Read the data files from the in_dir into a vector of string.
-fn read_inputs(in_dir: &str) -> io::Result<Vec<String>> {
-  let data: Vec<io::Result<String>> = NAMES.iter()
-    .map(|&day| {
-      let filename = format!("{in_dir}/{day}.txt");
-      fs::read_to_string(Path::new(&filename))
-    })
-    .collect();
-  data.into_iter().collect()
-}
-
 fn main() {
     let args: Args = argh::from_env();
     // Did the user pick a single day to run
@@ -86,13 +75,14 @@ fn main() {
     };
     // Read the inputs from the given directory
     println!("{} {}\n", "Reading from".bold(), &args.input);
-    let inputs = read_inputs(&args.input).expect("Can't read input dir");
+    let inputs = utils::read_inputs(&args.input, NAMES)
+      .expect("Can't read input dir");
 
-    let (elapsed, results) = time(&|| {
-        crate::FUNCS.iter().enumerate()
+    let (elapsed, results) = utils::time(&|| {
+        FUNCS.iter().enumerate()
           .filter(|(p, _)| day_filter.is_none() || day_filter.unwrap() == *p)
           .map(|(p, f)| f(&inputs[p]))
-          .collect::<Vec<DayResult>>()
+          .collect::<Vec<utils::DayResult>>()
     });
 
     for r in &results {
