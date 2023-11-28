@@ -1,5 +1,4 @@
 type InputType = Vec<Command>;
-type OutputType = String;
 
 #[derive(Debug)]
 pub enum Command {
@@ -47,7 +46,7 @@ impl State {
 const FIRST_CHECK: usize = 20;
 const PERIOD: usize = 40;
 
-pub fn part1(input: &InputType) -> OutputType {
+pub fn part1(input: &InputType) -> i64 {
   let mut next_cycle = FIRST_CHECK;
   let mut state = State::default();
   let mut result: i64 = 0;
@@ -58,7 +57,7 @@ pub fn part1(input: &InputType) -> OutputType {
       next_cycle += PERIOD;
     }
   }
-  format!("{}", result)
+  result
 }
 
 fn pixel(value: i64, column: usize) -> char {
@@ -69,7 +68,7 @@ fn pixel(value: i64, column: usize) -> char {
   }
 }
 
-pub fn part2(input: &InputType) -> OutputType {
+pub fn part2(input: &InputType) -> String {
   let mut result = String::new();
   let mut state = State::default();
   let mut time: usize = 0;
@@ -92,7 +91,7 @@ mod tests {
 
   #[test]
   fn test_part1() {
-    assert_eq!("13140", part1(&generator(INPUT)));
+    assert_eq!(13140, part1(&generator(INPUT)));
   }
 
   #[test]
