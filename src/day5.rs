@@ -76,7 +76,7 @@ pub fn generator(input: &str) -> InputType {
   let (state, moves) = input.split_once("\n\n").unwrap();
   InputType{
     state: State::parse(state),
-    moves: moves.lines().map(|l| Move::parse(l)).collect(),
+    moves: moves.lines().map(Move::parse).collect(),
   }
 }
 

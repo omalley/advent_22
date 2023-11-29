@@ -1,3 +1,5 @@
+use std::cmp::Ordering;
+
 type InputType = Vec<Num>;
 type OutputType = Num;
 
@@ -47,14 +49,16 @@ impl DoubleLinkedList {
 
   fn seek(&self, node: usize, count: Num) -> usize {
     let mut ptr = node;
-    if count > 0 {
-      for _ in 0..count {
-        ptr = self.data[ptr].next;
-      }
-    } else if count < 0 {
-      for _ in count..=0 {
-        ptr = self.data[ptr].prev;
-      }
+    match count.cmp(&0) {
+      Ordering::Greater =>
+        for _ in 0..count {
+          ptr = self.data[ptr].next;
+        }
+      Ordering::Less =>
+        for _ in count..=0 {
+          ptr = self.data[ptr].prev;
+        }
+      Ordering::Equal => {},
     }
     ptr
   }

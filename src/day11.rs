@@ -32,7 +32,7 @@ impl Operation {
 }
 
 fn parse_lit(input: &str) -> Result<ItemType, String> {
-  input.parse::<ItemType>().or_else(|e| Err(format!("{}", e)))
+  input.parse::<ItemType>().map_err(|e| format!("{}", e))
 }
 
 #[derive(Clone,Debug)]
@@ -80,12 +80,12 @@ pub struct Monkey {
 
 impl Monkey {
   fn parse_items(input: &str) -> Result<VecDeque<ItemType>, String> {
-    input.split(", ").map(|item| parse_lit(item)).collect()
+    input.split(", ").map(parse_lit).collect()
   }
 
   fn parse_next(input: &str) -> Result<usize, String> {
-    let word = input.split_whitespace().skip(5).next().ok_or("bad next")?;
-    word.parse().or_else(|_| Err(format!("bad next int '{}'", input)))
+    let word = input.split_whitespace().nth(5).ok_or("bad next")?;
+    word.parse().map_err(|_| format!("bad next int '{}'", input))
   }
 
   fn parse(input: &str) -> Result<Self, String> {
@@ -126,13 +126,13 @@ fn do_round(monkies: &mut Vec<Monkey>, clip: impl Fn(ItemType) -> ItemType) {
   }
 }
 
-fn compute_top_two(monkies: &Vec<Monkey>) -> OutputType {
+fn compute_top_two(monkies: &[Monkey]) -> OutputType {
   let mut counts: Vec<usize> = monkies.iter().map(|m| m.inspected).collect();
   counts.sort_by(|l,r| r.cmp(l));
   counts.iter().take(2).product()
 }
 
-fn find_multiple(monkies: &Vec<Monkey>, extra_factors: &Vec<ItemType>) -> ItemType {
+fn find_multiple(monkies: &[Monkey], extra_factors: &[ItemType]) -> ItemType {
   let mut factors: Vec<ItemType> = monkies.iter().map(|m| m.test.divisor()).collect();
   factors.extend(extra_factors.iter());
   factors.iter().fold(1, |acc, v| if acc % v == 0 { acc } else { acc * v })
@@ -140,7 +140,7 @@ fn find_multiple(monkies: &Vec<Monkey>, extra_factors: &Vec<ItemType>) -> ItemTy
 
 pub fn part1(input: &InputType) -> OutputType {
   let mut monkies = (*input).clone();
-  let multiple = find_multiple(&monkies, &vec![3]);
+  let multiple = find_multiple(&monkies, &[3]);
   for _ in 0..20 {
     do_round(&mut monkies, |v| (v % multiple) / 3);
   }
@@ -149,7 +149,7 @@ pub fn part1(input: &InputType) -> OutputType {
 
 pub fn part2(input: &InputType) -> OutputType {
   let mut monkies = (*input).clone();
-  let multiple = find_multiple(&monkies, &vec![]);
+  let multiple = find_multiple(&monkies, &[]);
   for _ in 0..10_000 {
     do_round(&mut monkies, |v| v % multiple);
   }

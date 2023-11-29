@@ -47,8 +47,8 @@ fn is_visible(input: &InputType) -> Vec<Vec<bool>> {
   let width = input[0].len();
   let mut result: Vec<Vec<bool>> = (0..height).map(|_| vec![false; width]).collect();
   // set the 4 corners
-  for x in vec![0, width-1] {
-    for y in vec![0, height-1] {
+  for x in [0, width-1] {
+    for y in [0, height-1] {
       result[y][x] = true;
     }
   }

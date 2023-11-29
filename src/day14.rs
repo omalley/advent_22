@@ -9,7 +9,7 @@ struct Point {
 
 impl Point {
   fn parse(input: &str) -> Self {
-    let (x,y) = input.split_once(",").unwrap();
+    let (x,y) = input.split_once(',').unwrap();
     Point{x: x.parse().unwrap(), y: y.parse().unwrap()}
   }
 }
@@ -23,7 +23,7 @@ impl Ledges {
   fn parse(input: &str) -> Self {
     let lines = input.lines()
       .map(|s| s.split(" -> ")
-        .map(|p| Point::parse(p)).collect())
+        .map(Point::parse).collect())
       .collect();
     Ledges{lines}
   }
@@ -85,7 +85,7 @@ pub fn generator(input: &str) -> InputType {
   CrossSection::new(&ledges)
 }
 
-fn do_grain(filled: &mut Vec<Vec<bool>>, start: &Point, input: &InputType) -> bool {
+fn do_grain(filled: &mut [Vec<bool>], start: &Point, input: &InputType) -> bool {
   let mut x = START.x;
   if filled[start.y][start.x - input.left] {
     return false
@@ -119,6 +119,7 @@ pub fn part1(input: &InputType) -> OutputType {
   usize::MAX
 }
 
+#[allow(clippy::needless_range_loop)]
 fn add_floor(input: &CrossSection, start: &Point) -> CrossSection {
   let height = input.height + 1;
   let left = usize::min(start.x - height, input.left);

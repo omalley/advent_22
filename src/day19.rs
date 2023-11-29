@@ -36,24 +36,25 @@ pub struct Blueprint {
 impl Blueprint {
   fn parse(line: &str) -> Self {
     let words: Vec<&str> = line.split_whitespace().collect();
-    let mut result = Blueprint::default();
-    result.id = words[1][..words[1].len()-1].parse().unwrap();
-    result.robot[Resource::Ore.idx()][Resource::Ore.idx()] = words[6].parse().unwrap();
-    result.robot[Resource::Clay.idx()][Resource::Ore.idx()] = words[12].parse().unwrap();
-    result.robot[Resource::Obsidian.idx()][Resource::Ore.idx()] = words[18].parse().unwrap();
-    result.robot[Resource::Obsidian.idx()][Resource::Clay.idx()] = words[21].parse().unwrap();
-    result.robot[Resource::Geode.idx()][Resource::Ore.idx()] = words[27].parse().unwrap();
-    result.robot[Resource::Geode.idx()][Resource::Obsidian.idx()] = words[30].parse().unwrap();
+    let id = words[1][..words[1].len()-1].parse().unwrap();
+    let mut robot = [[0; Resource::SIZE]; Resource::SIZE];
+    robot[Resource::Ore.idx()][Resource::Ore.idx()] = words[6].parse().unwrap();
+    robot[Resource::Clay.idx()][Resource::Ore.idx()] = words[12].parse().unwrap();
+    robot[Resource::Obsidian.idx()][Resource::Ore.idx()] = words[18].parse().unwrap();
+    robot[Resource::Obsidian.idx()][Resource::Clay.idx()] = words[21].parse().unwrap();
+    robot[Resource::Geode.idx()][Resource::Ore.idx()] = words[27].parse().unwrap();
+    robot[Resource::Geode.idx()][Resource::Obsidian.idx()] = words[30].parse().unwrap();
+    let mut max_robots = [0; Resource::SIZE];
     for r in Resource::iter() {
-      result.max_robots[r.idx()] = result.robot.iter().map(|col| col[r.idx()]).max().unwrap();
+      max_robots[r.idx()] = robot.iter().map(|col| col[r.idx()]).max().unwrap();
     }
-    result.max_robots[Resource::Geode.idx()] = Count::MAX;
-    result
+    max_robots[Resource::Geode.idx()] = Count::MAX;
+    Blueprint{id, robot, max_robots}
   }
 }
 
 pub fn generator(input: &str) -> InputType {
-  input.lines().map(|l| Blueprint::parse(l)).collect()
+  input.lines().map(Blueprint::parse).collect()
 }
 
 #[derive(Clone,Debug,Eq,Hash,PartialEq)]
@@ -149,15 +150,14 @@ impl State {
     // t^2 + (2 * robot - 1) * t + 2 * (s - res)  = 0
     let neg_b = 1.0 - 2.0 * f64::from(robot);
     let t = (neg_b + f64::sqrt(neg_b * neg_b + 8.0 * f64::from(needed - self.stock[r]))) / 2.0;
-    let result = Count::try_from(f64::ceil(t) as i64).unwrap_or(Count::MAX);
-    result
+    Count::try_from(f64::ceil(t) as i64).unwrap_or(Count::MAX)
   }
 
   /// Compute the minimum number of turns to build the given kind of robot.
   fn estimate_robot_build(&self, robot: Resource, blueprint: &Blueprint) -> Count {
     let rbt = robot.idx();
     if self.robots[rbt] > 0 {
-      return 0
+      0
     } else {
       Resource::iter()
         .map(|r|
@@ -173,7 +173,7 @@ impl State {
       .map(|r| self.estimate_robot_build(r, blueprint))
       .sum();
     if all_robots_built >= self.remaining_time {
-      return self.stock[Resource::Geode.idx()]
+      self.stock[Resource::Geode.idx()]
     } else {
       self.estimate_resource(Resource::Geode,
                              self.remaining_time - all_robots_built)

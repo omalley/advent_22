@@ -37,7 +37,7 @@ struct Position {
 impl Position {
   fn advance(&self, dir: Direction) -> Self {
     match dir {
-      Direction::Still => self.clone(),
+      Direction::Still => *self,
       Direction::North => Position{x: self.x, y: self.y - 1},
       Direction::South => Position{x: self.x, y: self.y + 1},
       Direction::West => Position{x: self.x - 1, y: self.y},
@@ -105,7 +105,7 @@ type OutputType = usize;
 
 pub fn generator(input: &str) -> InputType {
   let obstacles: Vec<Vec<Option<Direction>>> = input.lines()
-    .map(|l| l.chars().map(|c| Direction::parse(c)).collect())
+    .map(|l| l.chars().map(Direction::parse).collect())
     .collect();
   let start = Position{y: 0,
     x: obstacles[0].iter().enumerate()

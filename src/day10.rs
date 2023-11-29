@@ -19,7 +19,7 @@ impl Command {
 
 pub fn generator(input: &str) -> InputType {
   input.lines()
-    .map(|l| Command::parse(l))
+    .map(Command::parse)
     .collect()
 }
 

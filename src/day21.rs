@@ -78,7 +78,7 @@ impl Monkey {
     let op: Operation;
     let parameters: Vec<String>;
     if words.len() == 4 {
-      op = Operation::parse(&words[2]);
+      op = Operation::parse(words[2]);
       parameters = vec![words[1].to_string(), words[3].to_string()];
     } else {
       op = Operation::Literal(words[1].parse::<Num>().unwrap());
@@ -89,7 +89,7 @@ impl Monkey {
 }
 
 pub fn generator(input: &str) -> InputType {
-  input.lines().map(|l| Monkey::parse(l)).collect()
+  input.lines().map(Monkey::parse).collect()
 }
 
 #[derive(Debug)]
@@ -112,23 +112,22 @@ impl Calculation {
     if let Some(n) = results[monkey].cache {
       return n;
     }
-    let result;
-    match results[monkey].op {
-      Operation::Literal(num) => { result = num; },
+    let result = match results[monkey].op {
+      Operation::Literal(num) => { num },
       Operation::Plus => {
-        result = Self::evaluate(results, results[monkey].parameters[0]) +
+        Self::evaluate(results, results[monkey].parameters[0]) +
             Self::evaluate(results, results[monkey].parameters[1])},
       Operation::Minus => {
-        result = Self::evaluate(results, results[monkey].parameters[0]) -
+        Self::evaluate(results, results[monkey].parameters[0]) -
             Self::evaluate(results, results[monkey].parameters[1])},
       Operation::Multiply => {
-        result = Self::evaluate(results, results[monkey].parameters[0]) *
+        Self::evaluate(results, results[monkey].parameters[0]) *
             Self::evaluate(results, results[monkey].parameters[1])},
       Operation::Divide => {
-        result = Self::evaluate(results, results[monkey].parameters[0]) /
+        Self::evaluate(results, results[monkey].parameters[0]) /
             Self::evaluate(results, results[monkey].parameters[1])},
       _ => panic!("Can't handle {:?}", results[monkey].op),
-    }
+    };
     results[monkey].cache = Some(result);
     result
   }
@@ -136,8 +135,8 @@ impl Calculation {
 
 fn build_name_map(input: &[Monkey]) -> HashMap<String, usize> {
   let mut names: HashMap<String, usize> = HashMap::new();
-  for i in 0..input.len() {
-    names.insert(input[i].name.clone(), i);
+  for (i, monkey) in input.iter().enumerate() {
+    names.insert(monkey.name.clone(), i);
   }
   names
 }
@@ -165,16 +164,11 @@ impl SymbolicState {
 
   /// Do constant folding for operations where both parameters are literals.
   fn simplify(expr: SymbolicState) -> SymbolicState {
-    match &expr {
-      SymbolicState::Op(op, left, right) => {
-        match (left.borrow(), right.borrow()) {
-          (SymbolicState::Literal(l), SymbolicState::Literal(r)) => {
-            return SymbolicState::Literal(op.evaluate(*l, *r));
-          }
-          _ => { },
-        }
-      },
-      _ => { },
+    if let SymbolicState::Op(op, left, right) = &expr {
+      if let (SymbolicState::Literal(l), SymbolicState::Literal(r)) =
+         (left.borrow(), right.borrow()) {
+        return SymbolicState::Literal(op.evaluate(*l, *r));
+      }
     }
     expr
   }
@@ -199,20 +193,15 @@ impl SymbolicState {
   fn reduce_equals(expr: Rc<SymbolicState>, result: Num) -> Rc<SymbolicState> {
     let mut cur_result = result;
     let mut cur_expr = expr;
-    loop {
-      match cur_expr.clone().borrow() {
-        SymbolicState::Op(op, left, right) => {
-          if let SymbolicState::Literal(n) = left.borrow() {
-            cur_expr = right.clone();
-            cur_result = op.evaluate_for_right(*n, cur_result);
-          } else if let SymbolicState::Literal(n) = right.borrow() {
-            cur_expr = left.clone();
-            cur_result = op.evaluate_for_left(*n, cur_result);
-          } else {
-            break;
-          }
-        },
-        _ => { break; }
+    while let SymbolicState::Op(op, left, right) = cur_expr.clone().borrow() {
+      if let SymbolicState::Literal(n) = left.borrow() {
+        cur_expr = right.clone();
+        cur_result = op.evaluate_for_right(*n, cur_result);
+      } else if let SymbolicState::Literal(n) = right.borrow() {
+        cur_expr = left.clone();
+        cur_result = op.evaluate_for_left(*n, cur_result);
+      } else {
+        break;
       }
     }
     Rc::new(SymbolicState::Op(Operation::Equals, cur_expr,
@@ -220,16 +209,13 @@ impl SymbolicState {
   }
 
   fn reduce(expr: Rc<SymbolicState>) -> Rc<SymbolicState> {
-    match expr.borrow() {
-      SymbolicState::Op(Operation::Equals, left, right) => {
-        if let SymbolicState::Literal(n) = left.borrow() {
-          return Self::reduce_equals(right.clone(), *n);
-        }
-        if let SymbolicState::Literal(n) = right.borrow() {
-          return Self::reduce_equals(left.clone(), *n);
-        }
-      },
-      _ => {},
+    if let SymbolicState::Op(Operation::Equals, left, right) = expr.borrow() {
+      if let SymbolicState::Literal(n) = left.borrow() {
+        return Self::reduce_equals(right.clone(), *n);
+      }
+      if let SymbolicState::Literal(n) = right.borrow() {
+        return Self::reduce_equals(left.clone(), *n);
+      }
     }
     expr
   }

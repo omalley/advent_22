@@ -26,8 +26,8 @@ type InputType = Vec<Vec<Range>>;
 
 pub fn generator(input: &str) -> InputType {
   input.lines()
-    .map(|l| l.split(",")
-      .filter_map(|r| r.split_once("-"))
+    .map(|l| l.split(',')
+      .filter_map(|r| r.split_once('-'))
       .map(|(l,u)|
         Range{lower: l.parse::<i32>().expect("not integer"),
               upper: u.parse::<i32>().expect("not integer")})

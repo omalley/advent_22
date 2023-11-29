@@ -18,7 +18,7 @@ fn char_to_snafu_digit(ch: char) -> i8 {
 
 fn snafu_digit_to_char(digit: i8) -> char {
   match digit {
-    0..=2 => ('0' as u8 + digit as u8) as char,
+    0..=2 => (b'0' + digit as u8) as char,
     -1 => '-',
     -2 => '=',
     _ => panic!("Can't handle digit {digit}"),
@@ -26,7 +26,7 @@ fn snafu_digit_to_char(digit: i8) -> char {
 }
 
 fn snafu_to_i64(s: &str) -> i64 {
-  s.chars().map(|ch| char_to_snafu_digit(ch))
+  s.chars().map(char_to_snafu_digit)
     .fold(0, |acc, val| acc * BASE + val as i64)
 }
 

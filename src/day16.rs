@@ -37,7 +37,7 @@ pub struct Caves {
 
 impl Caves {
   fn parse(input: &str) -> Self {
-    let valves: Vec<Valve> = input.lines().map(|l| Valve::parse(l)).collect();
+    let valves: Vec<Valve> = input.lines().map(Valve::parse).collect();
     let mut map: HashMap<&str, usize> = HashMap::new();
     let mut flows: Vec<u64> = vec![0; valves.len()];
     let mut distances = vec![vec![valves.len() as u8; valves.len()]; valves.len()];

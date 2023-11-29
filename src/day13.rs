@@ -108,8 +108,8 @@ impl Display for List {
 
 pub fn generator(input: &str) -> InputType {
   input.lines()
-      .filter(|&l| l.len() > 0)
-      .map(|l| List::parse(l))
+      .filter(|&l| !l.is_empty())
+      .map(List::parse)
       .collect()
 }
 
@@ -125,7 +125,7 @@ pub fn part2(input: &InputType) -> OutputType {
   let mut list = input.clone();
   let dividers = vec![List::parse("[[2]]"), List::parse("[[6]]")];
   list.extend(dividers.iter().cloned());
-  list.sort_unstable_by(|l, r| l.cmp(r));
+  list.sort_unstable();
   list.iter().enumerate()
       .filter(|(_, l)| dividers.iter().any(|d| Rc::ptr_eq(l,d)))
       .map(|(i, _)| i + 1).product()

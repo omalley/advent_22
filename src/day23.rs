@@ -115,12 +115,12 @@ impl State {
       }
     }
     // If only 1 elf proposed moving there, go ahead and move
-    for i in 0..num_elves {
+    for (i, elf) in self.elves.iter_mut().enumerate() {
       if let Some(dir) = elf_proposal[i] {
-        let new_loc = self.elves[i].advance(dir);
+        let new_loc = elf.advance(dir);
         if *proposals.get(&new_loc).unwrap() == 1 {
           result = true;
-          self.elves[i] = new_loc;
+          *elf = new_loc;
         }
       }
     }
@@ -134,15 +134,15 @@ impl State {
     if self.elves.is_empty() {
       return (0..0, 0..0);
     }
-    let mut x_range = Coordinate::MAX..Coordinate::MIN;
-    let mut y_range = Coordinate::MAX..Coordinate::MIN;
+    let mut x_range = (Coordinate::MAX, Coordinate::MIN);
+    let mut y_range = (Coordinate::MAX, Coordinate::MIN);
     for p in &self.elves {
-      x_range.start = x_range.start.min(p.x);
-      x_range.end = x_range.end.max(p.x + 1);
-      y_range.start = y_range.start.min(p.y);
-      y_range.end = y_range.end.max(p.y + 1);
+      x_range.0 = x_range.0.min(p.x);
+      x_range.1 = x_range.1.max(p.x + 1);
+      y_range.0 = y_range.0.min(p.y);
+      y_range.1 = y_range.1.max(p.y + 1);
     }
-    (x_range, y_range)
+    (x_range.0..x_range.1, y_range.0..y_range.1)
   }
 
   /// Find the total size of the covered area
@@ -155,7 +155,7 @@ impl State {
 impl Display for State {
   fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
     let (x_range, y_range) = self.find_range();
-    write!(f, "turn: {}, x: {x_range:?}, y: {y_range:?}\n", self.turn)?;
+    writeln!(f, "turn: {}, x: {x_range:?}, y: {y_range:?}", self.turn)?;
     let locs = self.elves.iter().cloned().collect::<HashSet<Position>>();
     for y in y_range.clone() {
       for x in x_range.clone() {
@@ -165,7 +165,7 @@ impl Display for State {
           write!(f, ".")?;
         }
       }
-      write!(f, "\n")?;
+      writeln!(f)?;
     }
     Ok(())
   }

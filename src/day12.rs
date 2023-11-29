@@ -28,7 +28,7 @@ impl Puzzle {
       let mut row = Vec::new();
       for ch in line.chars() {
         match ch {
-          'a'..='z' => { row.push((ch as u8) - ('a' as u8)); },
+          'a'..='z' => { row.push((ch as u8) - b'a'); },
           'S' => { start = Position{x: row.len(), y: elevations.len()}; row.push(0u8); },
           'E' => { end = Position{x: row.len(), y: elevations.len()}; row.push(25u8); },
           _ => panic!("Unknown character {ch}"),

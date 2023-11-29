@@ -11,7 +11,7 @@ pub enum ListObject {
 
 impl ListObject {
   fn parse(line: &str) -> Self {
-    match line.split_once(" ").unwrap() {
+    match line.split_once(' ').unwrap() {
       ("dir", name) => Self::DIR(name.to_string()),
       (num, name) =>
         Self::FILE(name.to_string(),num.parse::<usize>().expect("size")),
@@ -38,14 +38,14 @@ impl Command {
     let words: Vec<&str> = lines.next().unwrap().split_whitespace().collect();
     match words[0] {
       "cd" => Self::CD(words[1].to_string()),
-      "ls" => Self::LS(lines.map(|item| ListObject::parse(item)).collect()),
+      "ls" => Self::LS(lines.map(ListObject::parse).collect()),
       _ => panic!("Unknown command {}", words[0]),
     }
   }
 }
 
 pub fn generator(input: &str) -> InputType {
-  input[2..].split("\n$ ").map(|cmd| Command::parse(cmd)).collect()
+  input[2..].split("\n$ ").map(Command::parse).collect()
 }
 
 fn build_sizes(commands: &Vec<Command>) -> HashMap<String, usize> {

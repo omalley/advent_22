@@ -29,7 +29,7 @@ impl Wind {
 
 pub fn generator(input: &str) -> InputType {
   input.chars().filter(|c| !c.is_ascii_whitespace())
-    .map(| c | Wind::parse(c)).collect()
+    .map(Wind::parse).collect()
 }
 
 #[derive(Clone,Copy,Debug,Eq,PartialEq)]
@@ -194,7 +194,7 @@ pub fn drop_rocks(input: &InputType, count: usize) -> OutputType {
   let mut board = Board::new(500_000);
   let mut wind_itr = WindIter::new(input);
   let mut pieces: Vec<Piece> = [PieceKind::Bar, PieceKind::Plus, PieceKind::L,
-    PieceKind::I, PieceKind::Square].iter().map(|k| Piece::new(k.clone())).collect();
+    PieceKind::I, PieceKind::Square].iter().map(|k| Piece::new(*k)).collect();
   let num_pieces = pieces.len();
   for piece_count in 0..count {
     // Check for cycles in the piece kind and wind

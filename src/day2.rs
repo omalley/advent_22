@@ -18,7 +18,7 @@ impl Move {
 
   /// Parse a line into the two moves
   fn parse(s: &str) -> Vec<Self> {
-    s.split_whitespace().map(|s| Self::from_str(s)).collect()
+    s.split_whitespace().map(Self::from_str).collect()
   }
 
   /// The ordinal of the move
@@ -57,19 +57,19 @@ impl Move {
 }
 
 pub fn generator(input: &str) -> Vec<Vec<Move>> {
-  input.lines().map(|l| Move::parse(l)).collect()
+  input.lines().map(Move::parse).collect()
 }
 
 pub fn part1(input: &[Vec<Move>]) -> i32 {
   input.iter()
     .map(|v| v[1].turn_eval(&v[0]))
-    .fold(0, |l, r| l + r)
+    .sum()
 }
 
 pub fn part2(input: &[Vec<Move>]) -> i32 {
   input.iter()
     .map(|v| v[1].find_my_move(&v[0]).turn_eval(&v[0]))
-    .fold(0, |l, r| l + r)
+    .sum()
 }
 
 #[cfg(test)]

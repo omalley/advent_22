@@ -27,7 +27,7 @@ pub struct Sensor {
 impl Sensor {
   fn parse(input: &str) -> Self {
     let (left, right)= input.split_once(": closest beacon is at ").unwrap();
-    Sensor{location: Point::parse(&left[10..]), closest: Point::parse(&right)}
+    Sensor{location: Point::parse(&left[10..]), closest: Point::parse(right)}
   }
 
   fn min_distance(&self) -> i64 {
@@ -47,7 +47,7 @@ impl Sensor {
 }
 
 pub fn generator(input: &str) -> InputType {
-  input.lines().map(|l| Sensor::parse(l)).collect()
+  input.lines().map(Sensor::parse).collect()
 }
 
 /// Find and dedup the list of beacons in a given row
@@ -76,12 +76,12 @@ fn simplify_ranges(ranges: &mut Vec<Range<i64>>) {
   }
 }
 
-fn ranges_include_location(ranges: &Vec<Range<i64>>, x: i64) -> bool {
+fn ranges_include_location(ranges: &[Range<i64>], x: i64) -> bool {
   ranges.iter().any(|r| r.start <= x && x < r.end )
 }
 
 /// Count the number of locations covered by the ranges
-fn count_locations(ranges: &Vec<Range<i64>>) -> usize {
+fn count_locations(ranges: &[Range<i64>]) -> usize {
   ranges.iter().map(|r| r.end - r.start).sum::<i64>() as usize
 }
 
@@ -144,8 +144,9 @@ fn boxify(coord: i64, splits: &[i64]) -> usize {
   }
 }
 
+#[allow(clippy::needless_range_loop)]
 fn find_sensor(input: &InputType, x_range: Range<i64>, y_range: Range<i64>) -> Point {
-  let boxes: Vec<SlantBox> = input.iter().map(|s| SlantBox::from(s)).collect();
+  let boxes: Vec<SlantBox> = input.iter().map(SlantBox::from).collect();
   let slant_x_bounds = y_range.start + x_range.start .. x_range.end + y_range.end - 1;
   let slant_y_bounds = y_range.start - x_range.end - 1 .. y_range.end - x_range.start;
   let mut x_div: Vec<i64> = boxes.iter()

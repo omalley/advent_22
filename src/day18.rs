@@ -14,7 +14,7 @@ pub struct Point {
 
 impl Point {
   fn parse(line: &str) -> Self {
-    let nums: Vec<Coordinate> = line.split(",")
+    let nums: Vec<Coordinate> = line.split(',')
       .map(|w| w.parse::<Coordinate>().unwrap())
       .collect();
     Point{x: nums[0], y: nums[1], z: nums[2]}
@@ -33,7 +33,7 @@ fn find_range(input: &[Coordinate]) -> Option<Range<Coordinate>> {
 }
 
 pub fn generator(input: &str) -> InputType {
-  input.lines().map(|l| Point::parse(l)).collect()
+  input.lines().map(Point::parse).collect()
 }
 
 fn size(input: &Range<Coordinate>) -> usize {
@@ -82,11 +82,11 @@ impl Blob {
     for delta in [(1, 0, 0), (-1, 0, 0), (0, 1, 0),
         (0, -1, 0), (0, 0, 1), (0, 0, -1)] {
       let other = Point{x: point.x + delta.0, y: point.y + delta.1, z: point.z + delta.2};
-      if self.ranges[0].contains(&other.x) && self.ranges[1].contains(&other.y) &&
-        self.ranges[2].contains(&other.z) {
-        if self.get(&other) == Kind::Rock {
-          result += 1;
-        }
+      if self.ranges[0].contains(&other.x) &&
+         self.ranges[1].contains(&other.y) &&
+         self.ranges[2].contains(&other.z) &&
+         self.get(&other) == Kind::Rock {
+        result += 1;
       }
     }
     result
@@ -110,19 +110,19 @@ impl Blob {
   fn get_box_edges(&self) -> Vec<Point> {
     let mut result = Vec::new();
     result.extend(self.get_slice(&(self.ranges[0].start..self.ranges[0].start+1),
-    &self.ranges[1], &self.ranges[2]).into_iter());
+    &self.ranges[1], &self.ranges[2]));
     result.extend(self.get_slice(&(self.ranges[0].end-1..self.ranges[0].end),
-                                 &self.ranges[1], &self.ranges[2]).into_iter());
+                                 &self.ranges[1], &self.ranges[2]));
     result.extend(self.get_slice(&self.ranges[0],
                                  &(self.ranges[1].start..self.ranges[1].start+1),
-                                 &self.ranges[2]).into_iter());
+                                 &self.ranges[2]));
     result.extend(self.get_slice(&self.ranges[0],
                                  &(self.ranges[1].end-1..self.ranges[1].end),
-                                 &self.ranges[2]).into_iter());
+                                 &self.ranges[2]));
     result.extend(self.get_slice(&self.ranges[0], &self.ranges[1],
-                                 &(self.ranges[2].start..self.ranges[2].start+1)).into_iter());
+                                 &(self.ranges[2].start..self.ranges[2].start+1)));
     result.extend(self.get_slice(&self.ranges[0], &self.ranges[1],
-                                 &(self.ranges[2].end-1..self.ranges[2].end)).into_iter());
+                                 &(self.ranges[2].end-1..self.ranges[2].end)));
     result
   }
 }

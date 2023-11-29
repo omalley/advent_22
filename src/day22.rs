@@ -37,7 +37,7 @@ struct Map {
 impl Map {
   fn parse(input: &str) -> Self {
     let walls:Vec<Vec<Spot>> = input.lines()
-      .map(|l| l.chars().map(|c| Spot::parse(c)).collect())
+      .map(|l| l.chars().map(Spot::parse).collect())
       .collect();
     let width = walls.iter().map(|r| r.len()).max().unwrap_or(0) as i32;
     let height = walls.len() as i32;
@@ -76,7 +76,7 @@ pub struct InputType {
 impl InputType {
 
   fn parse_moves(line: &str) -> Vec<Move> {
-    line.trim().chars().group_by(|ch| ('0'..='9').contains(ch))
+    line.trim().chars().group_by(|ch| ch.is_ascii_digit())
       .into_iter()
       .map(| (is_digit, mut itr) |
         if is_digit {
@@ -203,8 +203,7 @@ impl<Func> State<Func>
   }
 
   fn score(&self) -> i32 {
-    let result = 1000 * (self.y + 1) + 4 * (self.x + 1) + self.facing as i32;
-    result
+    1000 * (self.y + 1) + 4 * (self.x + 1) + self.facing as i32
   }
 }
 
@@ -279,18 +278,16 @@ struct JoinIterator<'a> {
 
 impl<'a> JoinIterator<'a> {
   fn new(cube: &'a Cube, xy: (i32, i32), vert: Direction, horiz: Direction) -> Self {
-    let x;
-    if horiz == Direction::Left {
-      x = xy.0 * cube.face_size;
+    let x = if horiz == Direction::Left {
+      xy.0 * cube.face_size
     } else {
-      x = (xy.0 + 1) * cube.face_size - 1;
-    }
-    let y;
-    if vert == Direction::Up {
-      y = xy.1 * cube.face_size;
+      (xy.0 + 1) * cube.face_size - 1
+    };
+    let y = if vert == Direction::Up {
+      xy.1 * cube.face_size
     } else {
-      y = (xy.1 + 1) * cube.face_size - 1;
-    }
+      (xy.1 + 1) * cube.face_size - 1
+    };
     let h_itr = EdgeIterator{cube, map_xy: (x, y),
       moving: horiz.flip(), following: vert, made_turn: false};
     let v_itr = EdgeIterator{cube, map_xy: (x, y),

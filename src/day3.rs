@@ -40,8 +40,7 @@ impl Contents {
 
   /// Create the intersection of a list of sets
   fn intersect(sets: &[Self]) -> Self {
-    let mut result = Self::default();
-    result.items = u64::MAX;
+    let mut result = Contents{items: u64::MAX};
     for s in sets {
       result.items &= s.items;
     }
@@ -82,7 +81,7 @@ impl Rucksack {
     let chars: Vec<char> = s.chars().collect();
     assert_eq!(chars.len() % 2, 0);
     let parts = chars.chunks(chars.len() / 2)
-      .map(|ch| Contents::from_chars(ch)).collect();
+      .map(Contents::from_chars).collect();
     Rucksack{parts}
   }
 
@@ -104,7 +103,7 @@ fn find_match(group: &[Rucksack]) -> Option<char> {
 }
 
 pub fn generator(input: &str) -> Vec<Rucksack> {
-  input.lines().map(|l| Rucksack::from_str(l)).collect()
+  input.lines().map(Rucksack::from_str).collect()
 }
 
 /// Find the common item in each sack and sum the priorities.

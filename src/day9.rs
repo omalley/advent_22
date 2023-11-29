@@ -19,7 +19,7 @@ pub struct Command {
 
 impl Command {
   fn parse(line: &str) -> Self {
-    let (cmd_str, count_str) = line.split_once(" ").unwrap();
+    let (cmd_str, count_str) = line.split_once(' ').unwrap();
     let count = count_str.parse::<usize>().unwrap();
     let dir = match cmd_str {
       "R" => Direction::Right,
@@ -42,7 +42,7 @@ impl Position {
   fn follow(&mut self, leader: &Position) {
     let (x_delta, y_delta) = (leader.x - self.x, leader.y - self.y);
     // Does the tail need to move?
-    if x_delta < -1 || x_delta > 1 || y_delta < -1 || y_delta > 1 {
+    if !(-1..=1).contains(&x_delta) || !(-1..=1).contains(&y_delta) {
       self.x += i32::signum(x_delta);
       self.y += i32::signum(y_delta);
     }
@@ -85,7 +85,7 @@ impl Rope {
 
 pub fn generator(input: &str) -> InputType {
   input.lines()
-    .map(|l| Command::parse(l))
+    .map(Command::parse)
     .collect()
 }
 
